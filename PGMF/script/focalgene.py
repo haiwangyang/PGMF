@@ -46,12 +46,31 @@ def get_pep_and_leftover_from_dna(dna, phase_left):
     pep_phased = str(Seq(dna_phased).translate())
     return(pep_phased, dna_leftover_left, dna_leftover_right)
 
+def get_phase_left_without_stop_codon(dct):
+    """ get the phase on the left with correct frame """
+    correct_ones = list()
+    for phase_left in range(0,3):
+        pep_phased, dna_leftover_left, dna_leftover_right = dct[phase_left]
+        if not "*" in pep_phased:
+            correct_ones.append(phase_left)
+    return correct_ones
+
+def get_phase_left_with_startpeptide(dct, startpeptide):
+    """ get the phase on the left with correct start peptide"""
+    correct_ones = list()
+    for phase_left in range(0,3):
+        pep_phased, dna_leftover_left, dna_leftover_right = dct[phase_left]
+        if startpeptide in pep_phased:
+            correct_ones.append(phase_left)
+    return correct_ones
+
+
 class focalgene:
     """focalgene object"""
-    def __init__(self, species, geneid, startpeptidelike):
+    def __init__(self, species, geneid, startpeptide):
         self.species = species
         self.geneid = geneid
-        self.startpeptidelike = startpeptidelike
+        self.startpeptide = startpeptide
         self.annotation = self.get_annotation_gene()
         self.scaffold = self.get_scaffold()
         self.scaffoldseq = self.get_scaffoldseq()
@@ -117,6 +136,7 @@ class focalgene:
                 sorted_exonrange.sort(key = lambda x: x[1], reverse = True)
 
             exonindex = 1
+            isoformdnaseq = ''
             for s, e in sorted_exonrange:
                 transid2updatedinfo[transid]["exon"][exonindex] = dict()
                 transid2updatedinfo[transid]["exon"][exonindex]["range"] = [s, e]      
@@ -128,22 +148,39 @@ class focalgene:
                 transid2updatedinfo[transid]["exon"][exonindex]["pepseq"] = dict()
                 for phase_left in range(0,3):
                     transid2updatedinfo[transid]["exon"][exonindex]["pepseq"][phase_left] = get_pep_and_leftover_from_dna(exonseq, phase_left)
+                isoformdnaseq = isoformdnaseq + exonseq
                 exonindex += 1
+            transid2updatedinfo[transid]["isoformdnaseq"] = isoformdnaseq
         return transid2updatedinfo
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='please provide species and geneid')
-    parser.add_argument('-s', '--species', type=str)
-    parser.add_argument('-g', '--geneid', type=str)
-    parser.add_argument('-M', '--startpeptide', type = str)
-    parser.add_argument('-Ml', '--startpeptidelike', type = str)
-    args = parser.parse_args()
-    tra = focalgene(args.species, args.geneid, args.startpeptidelike)
-    #tra.get_annotation_gene()
-    #print(tra.annotation)
-    #print(tra.scaffold)
-    #print(tra.scaffoldseq)
-    #print(tra.isoform)
+    #parser = argparse.ArgumentParser(description='please provide species and geneid')
+    #parser.add_argument('-s', '--species', type=str)
+    #parser.add_argument('-g', '--geneid', type=str)
+    #parser.add_argument('-M', '--startpeptide', type = str)
+    #args = parser.parse_args()
+    #tra = focalgene(args.species, args.geneid, args.startpeptide)
+
+    tra = focalgene("dper", "MFBST.6354", "MDADSSVA")
+
+    # functional tra isoform
+    traf = tra.isoform['MFBST.6354.1']
+    isoformdanseqf = traf['isoformdnaseq']
+
+    # the first exon
+    traf1 = traf['exon'][1]
+    phasef1 = get_phase_left_with_startpeptide(traf1["pepseq"], tra.startpeptide)[0]
+
+    print(">dper_tra_functional\n" + get_pep_and_leftover_from_dna(isoformdanseqf, phasef1)[0] + "\n")
+
+
+
+    #traf_2 = traf['exon'][2]
+    #print(get_phase_left_without_stop_codon(traf_2["pepseq"]))
+
+    #traf_3 = traf['exon'][3]
+
+
 
 
          
