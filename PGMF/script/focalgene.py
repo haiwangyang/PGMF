@@ -20,9 +20,9 @@ tra.isoform['FBtr0183594']["exon"][1]
 
 import re
 import sys
-import os
 import argparse
-import urllib.request
+from pathlib import Path
+import downloadbig
 from pyfaidx import Fasta
 from Bio.Seq import Seq
 
@@ -65,13 +65,6 @@ def get_phase_left_with_startpeptide(dct, startpeptide):
             correct_ones.append(phase_left)
     return correct_ones
 
-def fetch_from_helix_ftp(filename):
-    """ get data of big file from helix ftp """
-    #data = urllib.request.urlopen("ftp://helix.nih.gov/pub/haiwang/dmel.fasta")
-    data = urllib.request.urlopen("ftp://helix.nih.gov/pub/haiwang/" + filename)
-    return data
-
-
 class FocalGene:
     """focalgene object"""
     def __init__(self, species, geneid, startpeptide):
@@ -86,7 +79,20 @@ class FocalGene:
         
     def get_annotation_all(self):
         """ Open annotaiton file """
-        with open("../data/annotation/" + self.species + ".SVGpredAdded.v2.gtf", 'r') as f:
+        gtffolder = "../data/annotation"
+        gtffilename = self.species + ".SVGpredAdded.v2.gtf"
+        gtfpath = Path(gtffolder + "/" + gtffilename)
+
+        # check if the file exit, if not download from helix
+        try:
+            gtfpath.resolve()
+        except:
+            # not exist
+            print("downloading " + gtffilename + " and put it in " + gtffolder)
+            downloadbig.fetch_big_file_from_helix_ftp(gtffilename)        
+        
+        # return lines of gtf
+        with open(gtffolder + "/" + gtffilename, 'r') as f:
             lines = f.readlines()
             return lines
 
@@ -106,7 +112,20 @@ class FocalGene:
 
     def get_scaffoldseq(self):
         """ Get chromosome sequence of the focal gene """
-        return Fasta("../data/genome/" + self.species + ".fasta", as_raw = True)[self.scaffold]    
+        fastafolder = "../data/genome"
+        fastafilename = self.species + ".fasta"
+        fastapath = Path(fastafolder + "/" + fastafilename)
+
+        # check if the file exit, if not download from helix
+        try:
+            fastapath.resolve()
+            #os.path.isfile(fastafolder + "/" + fastafilename)
+        except:
+            print("downloading " + fastafilename + " and put it in " + fastafolder)
+            downloadbig.fetch_big_file_from_helix_ftp(fastafilename)
+
+        # return dct of fasta
+        return Fasta(fastafolder + "/" + fastafilename, as_raw = True)[self.scaffold]    
   
     def get_isoform(self):
         """ Get raw isoform information """
@@ -172,8 +191,6 @@ if __name__ == '__main__':
     phasef1 = get_phase_left_with_startpeptide(traf1["pepseq"], tra.startpeptide)[0]
 
     print(">dper_tra_functional\n" + get_pep_and_leftover_from_dna(isoformdanseqf, phasef1)[0] + "\n")
-
-
 
     #traf_2 = traf['exon'][2]
     #print(get_phase_left_without_stop_codon(traf_2["pepseq"]))
