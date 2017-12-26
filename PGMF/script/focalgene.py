@@ -22,6 +22,7 @@ import re
 import sys
 import os
 import argparse
+import urllib.request
 from pyfaidx import Fasta
 from Bio.Seq import Seq
 
@@ -64,8 +65,14 @@ def get_phase_left_with_startpeptide(dct, startpeptide):
             correct_ones.append(phase_left)
     return correct_ones
 
+def fetch_from_helix_ftp(filename):
+    """ get data of big file from helix ftp """
+    #data = urllib.request.urlopen("ftp://helix.nih.gov/pub/haiwang/dmel.fasta")
+    data = urllib.request.urlopen("ftp://helix.nih.gov/pub/haiwang/" + filename)
+    return data
 
-class focalgene:
+
+class FocalGene:
     """focalgene object"""
     def __init__(self, species, geneid, startpeptide):
         self.species = species
@@ -79,7 +86,7 @@ class focalgene:
         
     def get_annotation_all(self):
         """ Open annotaiton file """
-        with open("../data/annotation/" + self.species + ".tra.gtf", 'r') as f:
+        with open("../data/annotation/" + self.species + ".SVGpredAdded.v2.gtf", 'r') as f:
             lines = f.readlines()
             return lines
 
@@ -99,7 +106,7 @@ class focalgene:
 
     def get_scaffoldseq(self):
         """ Get chromosome sequence of the focal gene """
-        return Fasta("../data/genome/" + self.species + ".tra.fasta", as_raw = True)[self.scaffold]    
+        return Fasta("../data/genome/" + self.species + ".fasta", as_raw = True)[self.scaffold]    
   
     def get_isoform(self):
         """ Get raw isoform information """
@@ -154,14 +161,7 @@ class focalgene:
         return transid2updatedinfo
 
 if __name__ == '__main__':
-    #parser = argparse.ArgumentParser(description='please provide species and geneid')
-    #parser.add_argument('-s', '--species', type=str)
-    #parser.add_argument('-g', '--geneid', type=str)
-    #parser.add_argument('-M', '--startpeptide', type = str)
-    #args = parser.parse_args()
-    #tra = focalgene(args.species, args.geneid, args.startpeptide)
-
-    tra = focalgene("dper", "MFBST.6354", "MDADSSVA")
+    tra = FocalGene("dper", "MFBST.6354", "MDADSSVA")
 
     # functional tra isoform
     traf = tra.isoform['MFBST.6354.1']
