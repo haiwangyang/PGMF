@@ -2,32 +2,13 @@
 
 """
 Purpose:
-Annotation ID
+    Handling annotation ID
 
 """
 import re
 import downloadbig
 import sharedinfo
-from pathlib import Path
-
-def exist_file(folder, filename):
-    """ if the file exist """
-    path = Path(folder + "/" + filename)
-    try:
-        path.resolve()    
-    except:
-        return False
-    else:
-        return True
-
-def get_lines(folder, filename):
-    """ get lines of the file """
-    if not exist_file(folder, filename):
-        downloadbig.fetch_big_file_from_helix_ftp(folder, filename)
-
-    with open(folder + "/" + filename, 'r') as f:
-        lines = f.readlines()
-        return lines
+from sharedinfo import exist_file, get_lines
 
 def get_id(others, tag):
     """ get id from gtf others field
@@ -41,14 +22,19 @@ def get_id(others, tag):
         
 
 class FocalAnnotation:
-    """focalgene object"""
+    """FocalAnnotation object"""
     def __init__(self, species):
         self.species = species
         self.filename = species + ".SVGpredAdded.v2.gtf"
         self.lines = get_lines("../data/annotation", self.filename)
+        
+        # there are some newly identified orthologs 121
+        self.filenameneo121 = species + ".neo121"
+        self.linesneo121 = get_lines("../data/ortholog", self.filenameneo121)
+
         self.geneid, self.refgeneid, self.geneid2refgeneid, self.refgeneid2geneid  = self.get_geneidtable()
         self.geneid2refgeneid121, self.refgeneid2geneid121 = self.get_121_id()
-
+        
     def get_geneidtable(self):
         """ get geneid, refgeneid, and relationship """
         st_geneid = set()
@@ -75,7 +61,7 @@ class FocalAnnotation:
                 
                 dct_geneid2refgeneid[this_geneid].add(this_refgeneid)
                 dct_refgeneid2geneid[this_refgeneid].add(this_geneid)
-
+        
         return st_geneid, st_refgeneid, dct_geneid2refgeneid, dct_refgeneid2geneid
 
     def get_121_id(self):
@@ -98,6 +84,29 @@ class FocalAnnotation:
                 if refgeneid in refgeneid_one:
                     dct_geneid2refgeneid121[geneid] = refgeneid
                     dct_refgeneid2geneid121[refgeneid] = geneid
+
+        """ 
+            two manually corrected ortholog
+            refgeneid add species to distinguish
+        """
+        dsx_geneid = sharedinfo.dsx_species2geneid[self.species]
+        dsx_refgeneid = sharedinfo.dsx_refgeneid + "_" + self.species
+        fru_geneid = sharedinfo.fru_species2geneid[self.species]
+        fru_refgeneid = sharedinfo.fru_refgeneid + "_" + self.species
+
+        dct_geneid2refgeneid121[dsx_geneid] = dsx_refgeneid
+        dct_refgeneid2geneid121[dsx_refgeneid] = dsx_geneid
+        dct_geneid2refgeneid121[fru_geneid] = fru_refgeneid
+        dct_refgeneid2geneid121[fru_refgeneid] = fru_geneid
+
+        """
+           thousands of newly annotated one to one genes
+        """
+        for line in self.linesneo121:
+            (dmel_refgeneid, dxxx_geneid) = line.rstrip().split("\t")
+            dxxx_refgeneid = dmel_refgeneid + "_" + self.species            
+            dct_geneid2refgeneid121[dxxx_geneid] = dxxx_refgeneid
+            dct_refgeneid2geneid121[dxxx_refgeneid] = dxxx_geneid
 
         return dct_geneid2refgeneid121, dct_refgeneid2geneid121
 

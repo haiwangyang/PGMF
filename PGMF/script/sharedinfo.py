@@ -2,10 +2,41 @@
 
 """
 Purpose:
-Provide supporting information, such as
-species
-important genes
+    Provide supporting information, such as
+        functions
+        species
+        important genes
 """
+import downloadbig
+from pathlib import Path
+
+
+
+
+""" shared functions """ 
+
+def exist_file(folder, filename):
+    """ if the file exist """
+    path = Path(folder + "/" + filename)
+    try:
+        path.resolve()
+    except:
+        return False
+    else:
+        return True
+
+def get_lines(folder, filename):
+    """ get lines of the file """
+    if not exist_file(folder, filename):
+        downloadbig.fetch_big_file_from_helix_ftp(folder, filename)
+
+    with open(folder + "/" + filename, 'r') as f:
+        lines = f.readlines()
+        return lines
+
+
+
+""" shared species and gene information """
 
 ordered_species = ['dmel', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgri']
 
@@ -18,11 +49,11 @@ fru_geneid = ['FBgn0004652', 'MFBST.7875', 'MFBST.11171', 'MFBST.1237', 'MFBST.8
 fru_species2geneid = dict(zip(ordered_species, fru_geneid))
 
 
-class SharedInfo:
-    """ SharedInfo object """
-    def __init__(self):
-        self.species = ['dmel', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgri']
-        self.genomefilebiowulf = "/data/yangh13/python/packages/CRoS/CRoS/species_FB2017_03/fa/dxxx.fasta"
-        self.annotationfilebiowulf = "/data/yangh13/python/packages/CRoS/CRoS/species_FB2017_03/gtf/dxxx.SVGpredAdded.v2.gtf"
-        self.expressionfilebiowulf = "/data/yangh13/python/packages/CRoS/CRoS/htseq/FB2017_03_v2/dxxx.expression.nrc.tab" 
+
+
+""" temperary file locations """
+
+genomefilebiowulf = "/data/yangh13/python/packages/CRoS/CRoS/species_FB2017_03/fa/dxxx.fasta"
+annotationfilebiowulf = "/data/yangh13/python/packages/CRoS/CRoS/species_FB2017_03/gtf/dxxx.SVGpredAdded.v2.gtf"
+expressionfilebiowulf = "/data/yangh13/python/packages/CRoS/CRoS/htseq/FB2017_03_v2/dxxx.expression.nrc.tab" 
 

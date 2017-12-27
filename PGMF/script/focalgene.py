@@ -66,7 +66,7 @@ def get_phase_left_with_startpeptide(dct, startpeptide):
     return correct_ones
 
 class FocalGene:
-    """focalgene object"""
+    """ FocalGene object"""
     def __init__(self, species, geneid, startpeptide):
         self.species = species
         self.geneid = geneid
