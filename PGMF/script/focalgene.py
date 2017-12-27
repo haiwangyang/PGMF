@@ -76,7 +76,9 @@ class FocalGene:
         self.scaffoldseq = self.get_scaffoldseq()
         self.isoform = self.get_isoform()
         self.isoform = self.update_isoform()
-        
+        self.expressionall = self.get_expression_all()
+        #self.get_lines_all("expression", "expression.nrc.tab")
+
     def get_annotation_all(self):
         """ Open annotaiton file """
         gtffolder = "../data/annotation"
@@ -89,7 +91,7 @@ class FocalGene:
         except:
             # not exist
             print("downloading " + gtffilename + " and put it in " + gtffolder)
-            downloadbig.fetch_big_file_from_helix_ftp(gtffilename)        
+            downloadbig.fetch_big_file_from_helix_ftp("../data/annotation", gtffilename)        
         
         # return lines of gtf
         with open(gtffolder + "/" + gtffilename, 'r') as f:
@@ -122,7 +124,7 @@ class FocalGene:
             #os.path.isfile(fastafolder + "/" + fastafilename)
         except:
             print("downloading " + fastafilename + " and put it in " + fastafolder)
-            downloadbig.fetch_big_file_from_helix_ftp(fastafilename)
+            downloadbig.fetch_big_file_from_helix_ftp("../data/genome", fastafilename)
 
         # return dct of fasta
         return Fasta(fastafolder + "/" + fastafilename, as_raw = True)[self.scaffold]    
@@ -178,6 +180,45 @@ class FocalGene:
                 exonindex += 1
             transid2updatedinfo[transid]["isoformdnaseq"] = isoformdnaseq
         return transid2updatedinfo
+
+    def get_expression_all(self):
+        """ Open expression file (normalized read count from DESeq2) """
+        nrcfolder = "../data/expression"
+        nrcfilename = self.species + ".expression.nrc.tab"
+        nrcpath = Path(nrcfolder + "/" + nrcfilename)
+
+        # check if the file exit, if not download from helix
+        try:
+            nrcpath.resolve()
+        except:
+            # not exist
+            print("downloading " + nrcfilename + " and put it in " + nrcfolder)
+            downloadbig.fetch_big_file_from_helix_ftp("../data/expression", nrcfilename)
+
+        # return lines
+        with open(nrcfolder + "/" + nrcfilename, 'r') as f:
+            lines = f.readlines()
+            return lines
+
+    def get_lines_all(self, folder, filenamesuffix):
+        """ get all lines of a file
+            the file could be gtf, nrc 
+        """
+        filename = self.species + filenamesuffix
+        path = Path(folder + "/" + filename)
+        
+        # check if the file exit, if not download from helix
+        try:
+            path.resolve()
+        except:
+            # not exist
+            print("downloading " + filename + " and put it in " + folder)
+            downloadbig.fetch_big_file_from_helix_ftp("../data/" + folder, filename)
+
+        # return lines
+        with open(folder + "/" + filename, 'r') as f:
+            lines = f.readlines()
+            return lines
 
 if __name__ == '__main__':
     tra = FocalGene("dper", "MFBST.6354", "MDADSSVA")
