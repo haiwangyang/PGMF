@@ -39,6 +39,13 @@ def get_lines(folder, filename):
 """ shared species and gene information """
 
 ordered_species = ['dmel', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgri']
+ordered_tissue8 = ['wb', 'go', 're', 'ge', 'tx', 'dg', 'hd', 'ac']
+ordered_tissue7 = ['wb', 'go', 're', 'tx', 'dg', 'hd', 'ac']
+ordered_sex = ['f', 'm']
+
+tra_refgeneid = "FBgn0003741"
+tra_geneid = ["MFBST.6910", "MFBST.7004", "MFBST.9251", "MFBST.13092", "MFBST.6354", "MFBST.7187", "MFBST.10183", "MFBST.10131", "MFBST.4816"]
+tra_species2geneid = dict(zip(ordered_species, tra_geneid))
 
 dsx_refgeneid = "FBgn0000504"
 dsx_geneid = ['MFBST.8049', 'MFBST.8207', 'MFBST.11795', 'MFBST.1800', 'MFBST.313', 'MFBST.11568', 'MFBST.9018', 'MFBST.2242', 'MFBST.3971' ]

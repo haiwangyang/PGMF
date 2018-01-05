@@ -3,7 +3,7 @@
 """
 Purpose:
     Handling annotation ID
-
+    ortholog one2one (old and new) also included in the FocalAnnotation object
 """
 import re
 import downloadbig
@@ -28,6 +28,11 @@ class FocalAnnotation:
         self.filename = species + ".SVGpredAdded.v2.gtf"
         self.lines = get_lines("../data/annotation", self.filename)
         
+        # there are ortholog one2one
+        self.filenameolo121 = species + ".concise.one2one"        
+        self.linesolo121 = get_lines("../data/ortholog", self.filenameolo121)
+        self.olo121 = self.get_old_ortholog_121()
+
         # there are some newly identified orthologs 121
         self.filenameneo121 = species + ".neo121"
         self.linesneo121 = get_lines("../data/ortholog", self.filenameneo121)
@@ -63,10 +68,22 @@ class FocalAnnotation:
                 dct_refgeneid2geneid[this_refgeneid].add(this_geneid)
         
         return st_geneid, st_refgeneid, dct_geneid2refgeneid, dct_refgeneid2geneid
+    
+    def get_old_ortholog_121(self):
+        """
+           get old ortholog from FlyBase/OrthDB
+           dxxxFBgn to dmelFBgn
+        """
+        dct_dxxxFBgn2dmelFBgn = dict()
+        for line in self.linesolo121:
+            dmelFBgn, dmelSymbol, dxxxFBgn = line.rstrip().split("\t")
+            dct_dxxxFBgn2dmelFBgn[dxxxFBgn] = dmelFBgn
+        return dct_dxxxFBgn2dmelFBgn
 
     def get_121_id(self):
         """ get one to one (geneid to refgeneid)"""
 
+        """ make sure geneid and refgeneid have one to one relationship """
         geneid_one = set()
         for geneid in self.geneid2refgeneid.keys():
             if len(self.geneid2refgeneid[geneid]) == 1:
@@ -111,9 +128,9 @@ class FocalAnnotation:
         return dct_geneid2refgeneid121, dct_refgeneid2geneid121
 
 if __name__ == '__main__':
-#    for dxxx in sharedinfo.ordered_species:
-    for dxxx in ["dyak", ]:
-        print(dxxx)
+    for dxxx in sharedinfo.ordered_species:
+    # for dxxx in ["dyak", ]:
         ann = FocalAnnotation(dxxx)
+        print(dxxx,len(ann.geneid2refgeneid),len(ann.geneid2refgeneid121))
 
 
