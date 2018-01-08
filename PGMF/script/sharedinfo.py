@@ -34,7 +34,11 @@ def get_lines(folder, filename):
         lines = f.readlines()
         return lines
 
-
+def combination_of_two_lists(lst1, lst2):
+    """
+        ["f", "m"] and ["wb", "go", "re"] => ["f_wb", "f_go", "f_re", "m_wb", "m_go", "m_re"]
+    """
+    return [e1 + "_" + e2 for e1 in lst1 for e2 in lst2]
 
 """ shared species and gene information """
 
@@ -42,6 +46,11 @@ ordered_species = ['dmel', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir
 ordered_tissue8 = ['wb', 'go', 're', 'ge', 'tx', 'dg', 'hd', 'ac']
 ordered_tissue7 = ['wb', 'go', 're', 'tx', 'dg', 'hd', 'ac']
 ordered_sex = ['f', 'm']
+
+ordered_sexedtissue7 = combination_of_two_lists(ordered_sex, ordered_tissue7)
+
+ordered_sexedtissue8 = combination_of_two_lists(ordered_sex, ordered_tissue8)
+
 
 tra_refgeneid = "FBgn0003741"
 tra_geneid = ["MFBST.6910", "MFBST.7004", "MFBST.9251", "MFBST.13092", "MFBST.6354", "MFBST.7187", "MFBST.10183", "MFBST.10131", "MFBST.4816"]
