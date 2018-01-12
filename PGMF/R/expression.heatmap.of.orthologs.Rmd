@@ -1,0 +1,214 @@
+---
+title: "expression.heatmap.of.orthologs"
+author: "Haiwang Yang"
+date: "1/9/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library("pheatmap")
+library("RColorBrewer")
+
+
+base_path = "/Users/yangh13/PGMF/PGMF/"
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r shared variables and funtions}
+tissue8_in_final_order = c( "wb", "go", "re", "ge", "tx", "dg", "hd", "ac")
+tissue7_in_final_order = c( "wb", "go", "re", "tx", "dg", "hd", "ac")
+sexedtissue7_in_final_order = c("f_wb", "m_wb", "f_go", "m_go", "f_re", "m_re", "f_tx", "m_tx", "f_dg", "m_dg", "f_hd", "m_hd", "f_ac", "m_ac")
+sexedtissue8_in_final_order = c("f_wb", "m_wb", "f_go", "m_go", "f_re", "m_re", "f_ge", "m_ge", "f_tx", "m_tx", "f_dg", "m_dg", "f_hd", "m_hd", "f_ac", "m_ac")
+
+strains_in_final_order = c("w1118", "oreR", "dyak", "dana", "dpse", "dper", "dwil", "dmoj", "dvir", "dgri")
+species_in_final_order = c("dmel", "dyak", "dana", "dpse", "dper", "dwil", "dmoj", "dvir", "dgri")
+get_tissueFull = function(tissue) {gsub("wb", "whole organism", gsub("ac", "abdomen", gsub("hd", "head", gsub("dg", "digestive", gsub("tx", "thorax", gsub("ge", "terminalia",gsub("re", "repTract", gsub("go","gonad", tissue))))))))}
+
+tissue_species_ordered = c()
+for (tissue in tissue8_in_final_order){
+  for (species in species_in_final_order){
+    if (tissue == "ge"){
+      if (species == "dmel" | species == "dgri"){
+        tissue_species_ordered = c(tissue_species_ordered, paste0(tissue, "_", species))
+      }
+    }
+    else {
+      tissue_species_ordered = c(tissue_species_ordered, paste0(tissue, "_", species))
+    }
+  }
+}
+  
+# functions
+reorder_columns_for_matrix = function(mat, ordered_colnames){
+  ordered_mat = data.frame(row.names=row.names(mat))
+  for (i in ordered_colnames){
+    blocked_mat = mat[,grepl(i, colnames(mat))]
+    ordered_mat = cbind(ordered_mat, blocked_mat)
+  }
+  return(ordered_mat)
+}
+
+first = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[1])}
+second = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[2])}
+third = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[3])}
+fourth = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[4])}
+    
+    
+### color
+  blues <- rev(brewer.pal(9, "Blues"))
+  pal_blues <- colorRampPalette(blues)
+  reds <- rev(brewer.pal(9, "Reds"))
+  pal_reds <- colorRampPalette(reds)
+  colors = c(pal_reds(100)[c(1, 2, 4, 8, 16, 32, 64)],"white",pal_blues(100)[c(64, 32, 16, 8, 4, 2, 1)])
+  pal <- colorRampPalette(rev(colors))
+  
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r get big expression matrix}
+  # dmel
+  bigmatrix = read.table(paste0(base_path, "data/output/dmel.genic.nrc.txt"),sep="\t",header=1)
+  bigmatrix = reorder_columns_for_matrix(bigmatrix, sexedtissue8_in_final_order)
+  
+  # dyak to dvir
+  for (dxxx in species_in_final_order[2:8]){
+    print(dxxx)
+    d = read.table(paste0(base_path, "data/output/", dxxx , ".genic.nrc.txt"),sep="\t",header=1)
+    d = reorder_columns_for_matrix(d, sexedtissue7_in_final_order)
+    bigmatrix = merge(bigmatrix, d, by="row.names")
+    row.names(bigmatrix) = bigmatrix[,"Row.names"]
+    bigmatrix = bigmatrix[,-1]
+  }
+  
+  # dgri
+  for (dxxx in species_in_final_order[9]){
+    print(dxxx)
+    d = read.table(paste0(base_path, "data/output/", dxxx , ".genic.nrc.txt"),sep="\t",header=1)
+    d = reorder_columns_for_matrix(d, sexedtissue8_in_final_order)
+    bigmatrix = merge(bigmatrix, d, by="row.names")
+    row.names(bigmatrix) = bigmatrix[,"Row.names"]
+    bigmatrix = bigmatrix[,-1]
+  }
+  
+  bigmatrix = reorder_columns_for_matrix(bigmatrix, sexedtissue8_in_final_order)
+  
+```
+
+
+
+```{r get big expression matrix old annotation}
+  # dmel
+  obigmatrix = read.table(paste0(base_path, "data/output/dmel.genic.onrc.txt"),sep="\t",header=1)
+  obigmatrix = reorder_columns_for_matrix(obigmatrix, sexedtissue8_in_final_order)
+  
+  # dyak to dvir
+  for (dxxx in species_in_final_order[2:8]){
+    print(dxxx)
+    d = read.table(paste0(base_path, "data/output/", dxxx , ".genic.onrc.txt"),sep="\t",header=1)
+    d = reorder_columns_for_matrix(d, sexedtissue7_in_final_order)
+    obigmatrix = merge(obigmatrix, d, by="row.names")
+    row.names(obigmatrix) = obigmatrix[,"Row.names"]
+    obigmatrix = obigmatrix[,-1]
+  }
+  
+  # dgri
+  for (dxxx in species_in_final_order[9]){
+    print(dxxx)
+    d = read.table(paste0(base_path, "data/output/", dxxx , ".genic.onrc.txt"),sep="\t",header=1)
+    d = reorder_columns_for_matrix(d, sexedtissue8_in_final_order)
+    obigmatrix = merge(obigmatrix, d, by="row.names")
+    row.names(obigmatrix) = obigmatrix[,"Row.names"]
+    obigmatrix = obigmatrix[,-1]
+  }
+  
+  obigmatrix = reorder_columns_for_matrix(obigmatrix, sexedtissue8_in_final_order)
+  
+```
+
+
+```{r make complete expressional matrix of updated annotation and old annotation}
+  oFBgnset = row.names(obigmatrix)
+  FBgnset = row.names(bigmatrix)
+  fillFBgnset = oFBgnset[!oFBgnset %in% FBgnset]
+  
+  cbigmatrix = bigmatrix
+  cbigmatrix = rbind(cbigmatrix, obigmatrix[fillFBgnset,])
+  
+```
+
+```{r heatmap plot all samples}
+  
+  png(paste0(base_path, "data/output/expression.heatmap.of.orthologs.png"),width=5000,height=5000, res = 300, bg = NA)
+  pheatmap(log2(cbigmatrix+1), cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=1, legend = FALSE)
+  # pheatmap(log2(bigmatrix+1), color=pal(100), cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=0.1, legend = FALSE, breaks=seq(-b,b,length.out=100))
+  dev.off()
+  
+```
+
+
+```{r heatmap plot female/male}
+  
+  samples = colnames(cbigmatrix)
+  rsmallmatrix = data.frame("row.names" = row.names(cbigmatrix))
+  
+  for (species in species_in_final_order){
+    tags = c(species)
+    tissues = tissue7_in_final_order
+    if (species == "dmel"){
+      tags = c("w1118", "oreR")
+      tissues = tissue8_in_final_order
+    } else if (species == "dgri"){
+      tissues = tissue8_in_final_order
+    }
+
+    samples_of_species = c()
+    for (tag in tags){
+      samples_of_species = c(samples_of_species, samples[grepl(tag, samples)])
+    }
+    exp_of_species = cbigmatrix[,samples_of_species]
+    
+    for (tissue in tissues){
+      f_exp = exp_of_species[,grepl(paste0("_f_", tissue, "_"), samples_of_species)]
+      m_exp = exp_of_species[,grepl(paste0("_m_", tissue, "_"), samples_of_species)]
+      
+      # median of row
+      f_medianexp = as.numeric(apply(f_exp,1,median))
+      m_medianexp = as.numeric(apply(m_exp,1,median))
+      
+      medianratio = (f_medianexp + 1) / (m_medianexp + 1)
+      
+      rsmallmatrix[,paste0(tissue, "_", species)] = medianratio
+    }
+  }
+
+
+  
+  rsmallmatrix = rsmallmatrix[,tissue_species_ordered]
+  mm = log2(rsmallmatrix)
+  b = 5
+  mm[mm > b] = b
+  mm[mm < -b] = -b
+  
+  
+  
+  png(paste0(base_path, "data/output/fmratio.heatmap.of.orthologs.png"),width=5000,height=5000, res = 300, bg = NA)
+  pheatmap(mm, cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=6, legend = TRUE, color=pal(100), breaks=seq(-b,b,length.out=100))
+  dev.off()
+  
+```
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

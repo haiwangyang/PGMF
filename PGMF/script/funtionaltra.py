@@ -23,6 +23,7 @@ def write_junction_summary_to_table(species, locations, genesymbol):
 
 
 if __name__ == '__main__':
+    """ check each tra ortholog mannually """
     # focaljunction.get_junction_of_species_by_partiallocation("dmel", "3L:16590")
     # consensus, female-funtional, unisex-dysfunctional1
     # write_junction_summary_to_table("dmel", ["3L:16590295-16590351_-", "3L:16590756-16591003_-", "3L:16590931-16591003_-"], "tra")
@@ -51,7 +52,11 @@ if __name__ == '__main__':
     # consensus, female-funtional, unisex-dysfunctional1, unisex-dysfunctional2
     # write_junction_summary_to_table("dmoj", ["scaffold_6654:1870972-1871031_+", "scaffold_6654:1870338-1870585_+", "scaffold_6654:1870338-1870407_+", "scaffold_6654:1870518-1870585_+"], "tra")
 
-    focaljunction.get_junction_of_species_by_partiallocation("dvir", "scaffold_13049:1962")
-    # consensus, female-funtional, unisex-dysfunctional1, unisex-dysfunctional2
-    # write_junction_summary_to_table("dmoj", ["scaffold_6654:1870972-1871031_+", "scaffold_6654:1870338-1870585_+", "scaffold_6654:1870338-1870407_+", "scaffold_6654:1870518-1870585_+"], "tra")
+    # focaljunction.get_junction_of_species_by_partiallocation("dvir", "scaffold_13049:1963")
+    # consensus, female-funtional, unisex-dysfunctional1
+    write_junction_summary_to_table("dvir", ["scaffold_13049:1962579-1962641_-", "scaffold_13049:1963022-1963278_-", "scaffold_13049:1963210-1963278_-"], "tra")
  
+    # focaljunction.get_junction_of_species_by_partiallocation("dgri", "scaffold_15110:3027")
+    # consensus, female-funtional, unisex-dysfunctional1
+    write_junction_summary_to_table("dgri", ["scaffold_15110:3026921-3027142_-","scaffold_15110:3027520-3027803_-", "scaffold_15110:3027724-3027803_-"], "tra")
+    # p3 funtionaltra.py | g 3027520
