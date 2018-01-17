@@ -20,6 +20,21 @@ def get_id(others, tag):
         id = ""
     return id
         
+def get_novelnum(line):
+    """ get novel number such as novel exon, intron, loci from gffcmp.stats """
+    return line.rstrip().split("\t")[0].split(" ")[-1].split("/")[0]
+
+def summarize_annotation_update():
+    """ summarize annotation update before and after """
+    items = ['oldlocinum', 'newlocinum', 'oldlocinum_multitranscript', 'newlocinum_multitranscript', 'oldtranscriptnum', 'newtranscriptnum', 'oldtranscriptnum_multiexon', 'newtranscriptnum_multiexon', 'oldtranscriptnum_perlocus', 'newtranscriptnum_perlocus', 'novellocinum', 'novelexonnum', 'novelintronnum']
+    with open("../data/output/annotation.update.summary.tab", 'w') as f:
+        f.write("\t" + "\t".join(items) + "\n")
+        for dxxx in sharedinfo.ordered_species:
+            f.write(dxxx)
+            ann = FocalAnnotation(dxxx)
+            for item in items:
+                f.write("\t" + ann.stats[item])
+            f.write("\n")
 
 class FocalAnnotation:
     """FocalAnnotation object"""
@@ -28,6 +43,19 @@ class FocalAnnotation:
         self.filename = species + ".SVGpredAdded.v2.gtf"
         self.lines = get_lines("../data/annotation", self.filename)
         
+        # old annotation (to compare)
+        self.oldfilename = species + ".gtf"
+        self.oldlines = get_lines("../data/annotation", self.oldfilename)
+ 
+        # connection (old gene model and new gene model)
+        self.connectionlines = get_lines("../data/annotation", "old.vs.v2." + species + ".gene.intersect.txt.out")        
+
+        # compare updated annotation with old (postive v3 vs old-gtf; negative old-gtf vs v3)
+        self.statspositivelines = get_lines("../data/annotation", species + ".statspositive")
+        self.statsnegativelines = get_lines("../data/annotation", species + ".statsnegative")
+        self.tmaplines = get_lines("../data/annotation", species + ".v3.gtf.tmap")
+        self.stats = self.get_stats()
+
         # there are ortholog one2one
         self.filenameolo121 = species + ".concise.one2one"        
         self.linesolo121 = get_lines("../data/ortholog", self.filenameolo121)
@@ -127,10 +155,37 @@ class FocalAnnotation:
 
         return dct_geneid2refgeneid121, dct_refgeneid2geneid121
 
+    def get_stats(self):
+        """ get stats of annotation comparison, such as novel exon, intron, loci """
+        dct = dict()
+        for line in self.statsnegativelines:
+            if "#     Query mRNAs" in line:
+                m = re.search('Query mRNAs :   (\d+) in   (\d+) loci  \((\d+) multi-exon', line) 
+                dct['oldtranscriptnum'] = m.group(1)
+                dct['oldlocinum'] = m.group(2)
+                dct['oldtranscriptnum_multiexon'] = m.group(3)
+            elif "multi-transcript loci" in line:
+                m = re.search('(\d+) multi\-transcript loci, ~(.+?) transcripts', line)
+                dct['oldlocinum_multitranscript'] = m.group(1)
+                dct['oldtranscriptnum_perlocus'] = m.group(2)
+
+        for line in self.statspositivelines:
+            if "#     Query mRNAs" in line:
+                m = re.search('Query mRNAs :   (\d+) in   (\d+) loci  \((\d+) multi-exon', line)
+                dct['newtranscriptnum'] = m.group(1)
+                dct['newlocinum'] = m.group(2)
+                dct['newtranscriptnum_multiexon'] = m.group(3)
+            elif "multi-transcript loci" in line:
+                m = re.search('(\d+) multi\-transcript loci, ~(.+?) transcripts', line)
+                dct['newlocinum_multitranscript'] = m.group(1)
+                dct['newtranscriptnum_perlocus'] = m.group(2)
+            elif "Novel exons" in line:
+                dct['novelexonnum'] = get_novelnum(line)
+            elif "Novel introns" in line:
+                dct['novelintronnum'] = get_novelnum(line)
+            elif "Novel loci" in line:
+                dct['novellocinum'] = get_novelnum(line)
+        return dct
+
 if __name__ == '__main__':
-    for dxxx in sharedinfo.ordered_species:
-    # for dxxx in ["dyak", ]:
-        ann = FocalAnnotation(dxxx)
-        print(dxxx,len(ann.geneid2refgeneid),len(ann.geneid2refgeneid121))
-
-
+    summarize_annotation_update()
