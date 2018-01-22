@@ -36,25 +36,41 @@ def summarize_annotation_update():
                 f.write("\t" + ann.stats[item])
             f.write("\n")
 
+def summarize_gene_merge():
+    """ summarize gene merge number """
+    with open("../data/output/gene.merge.summary.tab", 'w') as f:
+        for species in sharedinfo.ordered_species:
+            ann = FocalAnnotation(species)
+            dct_merge = dict()
+            dct_merge[1] = 0
+            dct_merge[2] = 0
+            for newgeneid in ann.new2old_geneid.keys():
+                oldgeneid = ann.new2old_geneid[newgeneid]
+                print(species,newgeneid,len(oldgeneid),oldgeneid)
+                if len(oldgeneid) == 1:
+                    dct_merge[1] += 1
+                else:
+                    dct_merge[2] += 1
+            f.write(species + "\t" + str(dct_merge[1]) + "\t" + str(dct_merge[2]) + "\n")
+
 class FocalAnnotation:
     """FocalAnnotation object"""
     def __init__(self, species):
         self.species = species
-        self.filename = species + ".SVGpredAdded.v2.gtf"
+        # self.filename = species + ".SVGpredAdded.v2.gtf"
+        self.filename = species + ".v3.gtf"
         self.lines = get_lines("../data/annotation", self.filename)
         
         # old annotation (to compare)
         self.oldfilename = species + ".gtf"
         self.oldlines = get_lines("../data/annotation", self.oldfilename)
  
-        # connection (old gene model and new gene model)
-        self.connectionlines = get_lines("../data/annotation", "old.vs.v2." + species + ".gene.intersect.txt.out")        
-
         # compare updated annotation with old (postive v3 vs old-gtf; negative old-gtf vs v3)
         self.statspositivelines = get_lines("../data/annotation", species + ".statspositive")
         self.statsnegativelines = get_lines("../data/annotation", species + ".statsnegative")
-        self.tmaplines = get_lines("../data/annotation", species + ".v3.gtf.tmap")
         self.stats = self.get_stats()
+        self.tmaplines = get_lines("../data/annotation", species + ".v3.gtf.tmap")
+        self.old2new_geneid, self.new2old_geneid = self.get_tmap()
 
         # there are ortholog one2one
         self.filenameolo121 = species + ".concise.one2one"        
@@ -187,5 +203,28 @@ class FocalAnnotation:
                 dct['novellocinum'] = get_novelnum(line)
         return dct
 
+    def get_tmap(self):
+        """ get connection of gene ids between gtf and v3.gtf """
+        old2new_geneid = dict()
+        new2old_geneid = dict()
+        for line in self.tmaplines:
+            (ref_gene_id, ref_id, class_code, qry_gene_id, qry_id, FMI, FPKM, FPKM_conf_lo, FPKM_conf_hi, cov, len, major_iso_id, ref_match_len) = line.rstrip().split("\t")
+            if class_code == "=":
+                if not ref_gene_id in old2new_geneid.keys():
+                    old2new_geneid[ref_gene_id] = set()
+                old2new_geneid[ref_gene_id].add(qry_gene_id)
+                
+                if not qry_gene_id in new2old_geneid.keys():
+                    new2old_geneid[qry_gene_id] = set()
+                new2old_geneid[qry_gene_id].add(ref_gene_id)
+        return (old2new_geneid, new2old_geneid)
+        
+        
+
+        
 if __name__ == '__main__':
     summarize_annotation_update()
+    # summarize_gene_merge()
+
+
+

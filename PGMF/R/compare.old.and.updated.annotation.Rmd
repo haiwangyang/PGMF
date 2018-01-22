@@ -136,6 +136,31 @@ plot_before_after("transcriptnum_multiexon", "transcriptnum_singleexon")
 ```
 
 
+```{r gene merging summary}
+  d = read.table("/Users/yangh13/PGMF/PGMF/data/output/gene.merge.summary.tab")
+  colnames(d) = c("species", "newgeneid_num_clear", "newgeneid_num_merge")
+
+  # not merged
+  d0 = data.frame("row.names" = row.names(d))
+  d0[,"newgeneid_num_clear"] = d$newgeneid_num_clear
+
+  pdf(paste0("/Users/yangh13/PGMF/PGMF/data/output/gene.clear.summary.pdf"),width=5,height=5)
+  barplot(as.matrix(t(d0)), las=2, ylab = "clear gene")
+  dev.off()  
+  
+  # not merged
+  d1 = data.frame("row.names" = row.names(d))
+  d1[,"newgeneid_num_merge"] = d$newgeneid_num_merge
+
+  pdf(paste0("/Users/yangh13/PGMF/PGMF/data/output/gene.merge.summary.pdf"),width=5,height=5)
+  barplot(as.matrix(t(d1)), las=2, ylab = "merged gene")
+  dev.off()
+  
+  
+  
+```
+
+
 ```{r ABANDONED jaccard and shared intron}
   for (dxxx in species_in_final_order){
     print(dxxx)

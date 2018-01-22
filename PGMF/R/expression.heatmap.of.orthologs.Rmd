@@ -139,6 +139,7 @@ When you click the **Knit** button a document will be generated that includes bo
   cbigmatrix = bigmatrix
   cbigmatrix = rbind(cbigmatrix, obigmatrix[fillFBgnset,])
   
+  
 ```
 
 ```{r heatmap plot all samples}
@@ -150,6 +151,30 @@ When you click the **Knit** button a document will be generated that includes bo
   
 ```
 
+```{r guess phylogeny by expression}
+  cbigmatrix_m_wb = cbigmatrix[,grepl("m_go", colnames(cbigmatrix))]
+
+  median_mat = data.frame("row.names" = row.names(cbigmatrix_m_wb))
+  for (species in species_in_final_order){
+    if (species == "dmel"){
+      A = cbigmatrix_m_wb[,grepl("oreR", colnames(cbigmatrix_m_wb))]
+      B = cbigmatrix_m_wb[,grepl("w1118", colnames(cbigmatrix_m_wb))]
+      C = as.numeric(apply(cbind(A,B), 1, median))
+      
+      AB = cbigmatrix_m_wb[,grepl("w1118", colnames(cbigmatrix_m_wb))]
+      C = as.numeric(apply(cbind(A,B), 1, median))
+    }
+    else {
+      AB = cbigmatrix_m_wb[,grepl(species, colnames(cbigmatrix_m_wb))]
+      C = as.numeric(apply(AB, 1, median))
+    }
+    median_mat[,species] = C
+  }
+  
+   hc<-hclust(dist(log2(t(median_mat)+1)))
+   plot(hc)
+   
+```
 
 ```{r heatmap plot female/male}
   
