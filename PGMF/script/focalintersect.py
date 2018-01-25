@@ -5,10 +5,12 @@ Purpose:
     Handling intersectbed (-wo) report of two bed12
     first bed12 is PacBio Iso-seq bed (converted from bam)
     second bed12 is Gtf bed (converted from gtf or v3.gtf)
-
+    
     gtf versionA is FlyBase gtf
     gtf versionB is updated v3 gtf
 """
+
+from __future__ import print_function, division
 from sharedinfo import exist_file, get_lines
 
 def sum_comma_sep_str(string):
@@ -28,7 +30,16 @@ def get_id2exonlen(lines):
         id2exonlen[name] = sum_comma_sep_str(blockSizes)
     return(id2exonlen)
 
+""" new range1 """
 range1 = lambda start, end: range(start, end+1)
+
+
+def inside_exons(i, exons):
+    """ check if position i inside structure of exons """
+    for exon in exons:
+        if i in range1(exon[0], exon[1]):
+            return(True)
+    return(False)
 
 def get_exons(chromStart, chromEnd, blockSizes, blockStarts):
     """ parse info from bed12 to get exon blocks """
@@ -36,10 +47,10 @@ def get_exons(chromStart, chromEnd, blockSizes, blockStarts):
     blockStarts = [int(i) for i in blockStarts.split(",") if not i == "" ]
     n = len(blockSizes)
     exons = []
-    print("block: " + str(n))
-    print(blockSizes,  blockStarts)
+    #print("block: " + str(n))
+    #print(blockSizes,  blockStarts)
     for i in range(n):
-        print(i)
+        #print(i)
         blockStart = blockStarts[i]
         blockSize = blockSizes[i]
         exonStart = chromStart + blockStart
@@ -73,8 +84,8 @@ class FocalIntersect:
         print("get v3.gtf's transid to exonlen ...")
         self.transidB2exonlen = get_id2exonlen(self.linesAnnotationBedB) 
         
-        self.filenameA = self.name + ".bam.bed.intersect_gtf"
-        self.filenameB = self.name + ".bam.bed.intersect_v3gtf"
+        self.filenameA = self.name + ".bam.bed.intersect_gtf_short"
+        self.filenameB = self.name + ".bam.bed.intersect_v3gtf_short"
         print("get lines of " + self.filenameA)
         self.linesA = get_lines("../data/pacbio", self.filenameA)
         print("get lines of " + self.filenameB)
@@ -86,6 +97,12 @@ class FocalIntersect:
 
         self.isoseqid2besttransidA = self.get_isoseqid2besttransid("A")
         self.isoseqid2besttransidB = self.get_isoseqid2besttransid("B")
+        
+        """ get jaccard info such as intersection union jaccard for each isoseqid """
+        print("get jaccard A info ...")
+        self.jaccard_infoA = self.get_jaccard_info("A")
+        print("get jaccard B info ...")
+        self.jaccard_infoB = self.get_jaccard_info("B")
 
     def get_intersectinfo(self, gtf_version):
         if gtf_version == "A":
@@ -132,21 +149,57 @@ class FocalIntersect:
             isoseqid2besttransid[isoseqid] = max(inverse)[1]         
         return(isoseqid2besttransid)
 
+    def get_jaccard_info(self, gtf_version):
+        """ get the transid with the largest overlap """
+        if gtf_version == "A":
+            isoseqid2besttransid = self.isoseqid2besttransidA
+            isoseqidtransid2info = self.isoseqidtransidA2info
+        elif gtf_version == "B":
+            isoseqid2besttransid = self.isoseqid2besttransidB
+            isoseqidtransid2info = self.isoseqidtransidB2info
+
+        isoseqid2jaccardinfo = dict()
+        count = 0
+        for isoseqid in isoseqid2besttransid.keys():
+            if count % 1000 == 0:
+                print(count)
+            count += 1
+            transid = isoseqid2besttransid[isoseqid]
+            line = isoseqidtransid2info[isoseqid + "." + transid]
+            # print(isoseqid, transid, line)
+            (chrom1, chromStart1, chromEnd1, isoseqid, score1, strand1, thickStart1, thickEnd1, itemRgb1, blockCount1, blockSizes1, blockStarts1, chrom2, chromStart2, chromEnd2, transid, score2, strand2, thickStart2, thickEnd2, itemRgb2, blockCount2, blockSizes2, blockStarts2, intersection)  = line.rstrip().split("\t")
+            chromStart1 = int(chromStart1)
+            chromEnd1 = int(chromEnd1)
+            chromStart2 = int(chromStart2)
+            chromEnd2 = int(chromEnd2)
+            exons1 = get_exons(chromStart1, chromEnd1, blockSizes1, blockStarts1)
+            exons2 = get_exons(chromStart2, chromEnd2, blockSizes2, blockStarts2)
+            minStart =  min(chromStart1, chromStart2)
+            maxEnd = max(chromEnd1, chromEnd2)
+            #print(chromStart1, chromEnd1, blockSizes1, blockStarts1, exons1)
+            union_sum = 0
+            intersection_sum = 0
+            for i in range1(minStart, maxEnd):
+                first = inside_exons(i, exons1)
+                second = inside_exons(i, exons2)
+                if first + second > 0:
+                    union_sum += 1
+                    if first + second == 2:
+                        intersection_sum += 1
+            jaccard = intersection_sum / union_sum
+            isoseqid2jaccardinfo[isoseqid] = [intersection_sum, union_sum, jaccard]
+        return(isoseqid2jaccardinfo)
+
 if __name__ == '__main__':
     ins = FocalIntersect("dmel", "f", "wb", "r1")
-    for isoseqid in ins.isoseqid2besttransidA.keys():
-        transidA = ins.isoseqid2besttransidA[isoseqid]
-        line = ins.isoseqidtransidA2info[isoseqid + "." + transidA]
-        # print(isoseqid, transidA, line)
-        (chrom1, chromStart1, chromEnd1, isoseqid, score1, strand1, thickStart1, thickEnd1, itemRgb1, blockCount1, blockSizes1, blockStarts1, chrom2, chromStart2, chromEnd2, transid, score2, strand2, thickStart2, thickEnd2, itemRgb2, blockCount2, blockSizes2, blockStarts2, intersection)  = line.rstrip().split("\t")
-        chromStart1 = int(chromStart1)
-        chromEnd1 = int(chromEnd1)
-        chromStart2 = int(chromStart2)
-        chromEnd2 = int(chromEnd2)
-        exons1 = get_exons(chromStart1, chromEnd1, blockSizes1, blockStarts1)
-        #exons2 = get_exons(chromStart2, chromEnd2, blockSizes2, blockStarts2)
-        #minStart =  min(chromStart1, chromStart2)
-        #maxEnd = max(chromEnd1, chromEnd2)
-        print(chromStart1, chromEnd1, blockSizes1, blockStarts1, exons1)
-        #for i in range1(minStart, maxEnd):
-            
+    with open("../data/output/" + ins.name + ".A.txt", 'w') as f:
+        for isoseqid in ins.jaccard_infoA.keys():
+             intersection_sum, union_sum, jaccard = ins.jaccard_infoA[isoseqid]
+             transid = ins.isoseqid2besttransidA[isoseqid]
+             f.write(isoseqid + "\t" + transid + "\t" + str(intersection_sum) + "\t" + str(union_sum) + "\t" + str(jaccard) + "\n")
+
+    with open("../data/output/" + ins.name + ".B.txt", 'w') as f:
+        for isoseqid in ins.jaccard_infoB.keys():
+             intersection_sum, union_sum, jaccard = ins.jaccard_infoB[isoseqid]
+             transid = ins.isoseqid2besttransidB[isoseqid]
+             f.write(isoseqid + "\t" + transid + "\t" + str(intersection_sum) + "\t" + str(union_sum) + "\t" + str(jaccard) + "\n")
