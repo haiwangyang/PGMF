@@ -84,8 +84,8 @@ class FocalIntersect:
         print("get v3.gtf's transid to exonlen ...")
         self.transidB2exonlen = get_id2exonlen(self.linesAnnotationBedB) 
         
-        self.filenameA = self.name + ".bam.bed.intersect_gtf_short"
-        self.filenameB = self.name + ".bam.bed.intersect_v3gtf_short"
+        self.filenameA = self.name + ".bam.bed.intersect_gtf"
+        self.filenameB = self.name + ".bam.bed.intersect_v3gtf"
         print("get lines of " + self.filenameA)
         self.linesA = get_lines("../data/pacbio", self.filenameA)
         print("get lines of " + self.filenameB)
