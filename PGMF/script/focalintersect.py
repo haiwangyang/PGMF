@@ -12,6 +12,7 @@ Purpose:
 
 from __future__ import print_function, division
 from sharedinfo import exist_file, get_lines
+import sys
 
 def sum_comma_sep_str(string):
     """ return sum value of the comma separated string """
@@ -191,7 +192,9 @@ class FocalIntersect:
         return(isoseqid2jaccardinfo)
 
 if __name__ == '__main__':
-    ins = FocalIntersect("dmel", "f", "wb", "r1")
+    name = sys.argv[1] # dmel_f_wb_r1
+    (species, sex, tissue, replicate) = name.split("_")
+    ins = FocalIntersect(species, sex, tissue, replicate)
     with open("../data/output/" + ins.name + ".A.txt", 'w') as f:
         for isoseqid in ins.jaccard_infoA.keys():
              intersection_sum, union_sum, jaccard = ins.jaccard_infoA[isoseqid]
