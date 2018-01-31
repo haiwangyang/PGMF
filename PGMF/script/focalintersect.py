@@ -161,22 +161,21 @@ def summarize_jaccard(sample):
              f.write(isoseqid + "\t" + transid + "\t" + str(intersection_sum) + "\t" + str(union_sum) + "\t" + str(jaccard) + "\n")
 
 
-def summarize_end_for_all_eight_samples():
+def summarize_end(sample):
     """ summarize end isoseq and gene model report """
-    for sample in sharedinfo.pacbio_sample:
-        (species, sex, tissue, replicate) = sample.split("_")
-        ins = FocalIntersect(species, sex, tissue, replicate)
-        with open("../data/output/" + ins.name + ".end.A.txt", 'w') as f:
-            for isoseqid in ins.end_infoA.keys():
-                 exonnum1, exonnum2, five_desc, three_desc = ins.end_infoA[isoseqid]
-                 transid = ins.isoseqid2besttransidA[isoseqid]
-                 f.write(isoseqid + "\t" + transid + "\t" + exonnum1 + "\t" + exonnum2 + "\t" + five_desc + "\t" + three_desc + "\n")
+    (species, sex, tissue, replicate) = sample.split("_")
+    ins = FocalIntersect(species, sex, tissue, replicate)
+    with open("../data/output/" + ins.name + ".end.A.txt", 'w') as f:
+        for isoseqid in ins.end_infoA.keys():
+             exonnum1, exonnum2, five_desc, three_desc = ins.end_infoA[isoseqid]
+             transid = ins.isoseqid2besttransidA[isoseqid]
+             f.write(isoseqid + "\t" + transid + "\t" + exonnum1 + "\t" + exonnum2 + "\t" + five_desc + "\t" + three_desc + "\n")
 
-        with open("../data/output/" + ins.name + ".end.B.txt", 'w') as f:
-            for isoseqid in ins.end_infoB.keys():
-                 exonnum1, exonnum2, five_desc, three_desc = ins.end_infoB[isoseqid]
-                 transid = ins.isoseqid2besttransidB[isoseqid]
-                 f.write(isoseqid + "\t" + transid + "\t" + exonnum1 + "\t" + exonnum2 + "\t" + five_desc + "\t" + three_desc + "\n")
+    with open("../data/output/" + ins.name + ".end.B.txt", 'w') as f:
+        for isoseqid in ins.end_infoB.keys():
+             exonnum1, exonnum2, five_desc, three_desc = ins.end_infoB[isoseqid]
+             transid = ins.isoseqid2besttransidB[isoseqid]
+             f.write(isoseqid + "\t" + transid + "\t" + exonnum1 + "\t" + exonnum2 + "\t" + five_desc + "\t" + three_desc + "\n")
 
 class FocalIntersect:
     """FocalIntersect object"""
@@ -369,7 +368,7 @@ class FocalIntersect:
 if __name__ == '__main__':
     sample = sys.argv[1] # dmel_f_wb_r1
     # summarize_jaccard(sample)
-    summarize_end_for_all_eight_samples()
+    summarize_end(sample)
 
     (species, sex, tissue, replicate) = sample.split("_")
     ins = FocalIntersect(species, sex, tissue, replicate)
