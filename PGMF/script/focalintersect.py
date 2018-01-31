@@ -8,10 +8,14 @@ Purpose:
     
     gtf versionA is FlyBase gtf
     gtf versionB is updated v3 gtf
+
+    potential interesting region
+    dmel X:11165258-11167748
 """
 
 from __future__ import print_function, division
 from sharedinfo import exist_file, get_lines
+import sharedinfo
 import sys
 
 def sum_comma_sep_str(string):
@@ -155,6 +159,24 @@ def summarize_jaccard(sample):
              intersection_sum, union_sum, jaccard = ins.jaccard_infoB[isoseqid]
              transid = ins.isoseqid2besttransidB[isoseqid]
              f.write(isoseqid + "\t" + transid + "\t" + str(intersection_sum) + "\t" + str(union_sum) + "\t" + str(jaccard) + "\n")
+
+
+def summarize_end_for_all_eight_samples():
+    """ summarize end isoseq and gene model report """
+    for sample in sharedinfo.pacbio_sample:
+        (species, sex, tissue, replicate) = sample.split("_")
+        ins = FocalIntersect(species, sex, tissue, replicate)
+        with open("../data/output/" + ins.name + ".end.A.txt", 'w') as f:
+            for isoseqid in ins.end_infoA.keys():
+                 exonnum1, exonnum2, five_desc, three_desc = ins.end_infoA[isoseqid]
+                 transid = ins.isoseqid2besttransidA[isoseqid]
+                 f.write(isoseqid + "\t" + transid + "\t" + exonnum1 + "\t" + exonnum2 + "\t" + five_desc + "\t" + three_desc + "\n")
+
+        with open("../data/output/" + ins.name + ".end.B.txt", 'w') as f:
+            for isoseqid in ins.end_infoB.keys():
+                 exonnum1, exonnum2, five_desc, three_desc = ins.end_infoB[isoseqid]
+                 transid = ins.isoseqid2besttransidB[isoseqid]
+                 f.write(isoseqid + "\t" + transid + "\t" + exonnum1 + "\t" + exonnum2 + "\t" + five_desc + "\t" + three_desc + "\n")
 
 class FocalIntersect:
     """FocalIntersect object"""
@@ -329,20 +351,26 @@ class FocalIntersect:
             isoseqid2jaccardinfo[isoseqid] = [intersection_sum, union_sum, jaccard]
         return(isoseqid2jaccardinfo)
 
+    def generate_jaccard0_isoseq_bed(self):
+        """ get the isoseq reads with no overlap with existing gene model in v3 annotation """
+        all = set(self.isoseqid2exonlen.keys())
+        notwant = set(self.isoseqid2besttransidB.keys())
+        want = all - notwant
+        want_lines = []
+        with open("../data/pacbio/" + self.name + ".B.j0.bed", 'w') as f:
+            for line in self.linesPacBioBed:
+                (chrom, chromStart, chromEnd, name, score, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts) = line.rstrip().split("\t")
+                if name in want:
+                    f.write(line)
+
+                
+
+
 if __name__ == '__main__':
     sample = sys.argv[1] # dmel_f_wb_r1
     # summarize_jaccard(sample)
+    summarize_end_for_all_eight_samples()
 
     (species, sex, tissue, replicate) = sample.split("_")
     ins = FocalIntersect(species, sex, tissue, replicate)
-    with open("../data/output/" + ins.name + ".end.A.txt", 'w') as f:
-        for isoseqid in ins.end_infoA.keys():
-             exonnum1, exonnum2, five_desc, three_desc = ins.end_infoA[isoseqid]
-             transid = ins.isoseqid2besttransidA[isoseqid]
-             f.write(isoseqid + "\t" + transid + "\t" + exonnum1 + "\t" + exonnum2 + "\t" + five_desc + "\t" + three_desc + "\n")
-
-    with open("../data/output/" + ins.name + ".end.B.txt", 'w') as f:
-        for isoseqid in ins.end_infoB.keys():
-             exonnum1, exonnum2, five_desc, three_desc = ins.end_infoB[isoseqid]
-             transid = ins.isoseqid2besttransidB[isoseqid]
-             f.write(isoseqid + "\t" + transid + "\t" + exonnum1 + "\t" + exonnum2 + "\t" + five_desc + "\t" + three_desc + "\n")
+    ins.generate_jaccard0_isoseq_bed()

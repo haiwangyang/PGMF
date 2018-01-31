@@ -64,7 +64,7 @@ fru_refgeneid = "FBgn0004652"
 fru_geneid = ['FBgn0004652', 'MFBST.7875', 'MFBST.11171', 'MFBST.1237', 'MFBST.847', 'MFBST.11356', 'MFBST.7842', 'MFBST.1901', 'MFBST.2717']
 fru_species2geneid = dict(zip(ordered_species, fru_geneid))
 
-pacbio_filename = ["dgri_f_wb_r1", "dgri_f_wb_r2", "dgri_m_wb_r1", "dgri_m_wb_r2", "dmel_f_go_r1", "dmel_f_wb_r1", "dmel_m_go_r1", "dmel_m_wb_r1"]
+pacbio_sample = ["dgri_f_wb_r1", "dgri_f_wb_r2", "dgri_m_wb_r1", "dgri_m_wb_r2", "dmel_f_go_r1", "dmel_f_wb_r1", "dmel_m_go_r1", "dmel_m_wb_r1"]
 
 
 """ temperary file locations """

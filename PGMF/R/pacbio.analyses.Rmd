@@ -1,0 +1,140 @@
+---
+title: "pacbio.analyses"
+author: "Haiwang Yang"
+date: "1/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library("pheatmap")
+library("RColorBrewer")
+
+
+base_path = "/Users/yangh13/PGMF/PGMF/"
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r shared variables and funtions}
+tissue8_in_final_order = c( "wb", "go", "re", "ge", "tx", "dg", "hd", "ac")
+tissue7_in_final_order = c( "wb", "go", "re", "tx", "dg", "hd", "ac")
+sexedtissue7_in_final_order = c("f_wb", "m_wb", "f_go", "m_go", "f_re", "m_re", "f_tx", "m_tx", "f_dg", "m_dg", "f_hd", "m_hd", "f_ac", "m_ac")
+sexedtissue8_in_final_order = c("f_wb", "m_wb", "f_go", "m_go", "f_re", "m_re", "f_ge", "m_ge", "f_tx", "m_tx", "f_dg", "m_dg", "f_hd", "m_hd", "f_ac", "m_ac")
+
+strains_in_final_order = c("w1118", "oreR", "dyak", "dana", "dpse", "dper", "dwil", "dmoj", "dvir", "dgri")
+species_in_final_order = c("dmel", "dyak", "dana", "dpse", "dper", "dwil", "dmoj", "dvir", "dgri")
+get_tissueFull = function(tissue) {gsub("wb", "whole organism", gsub("ac", "abdomen", gsub("hd", "head", gsub("dg", "digestive", gsub("tx", "thorax", gsub("ge", "terminalia",gsub("re", "repTract", gsub("go","gonad", tissue))))))))}
+
+tissue_species_ordered = c()
+for (tissue in tissue8_in_final_order){
+  for (species in species_in_final_order){
+    if (tissue == "ge"){
+      if (species == "dmel" | species == "dgri"){
+        tissue_species_ordered = c(tissue_species_ordered, paste0(tissue, "_", species))
+      }
+    }
+    else {
+      tissue_species_ordered = c(tissue_species_ordered, paste0(tissue, "_", species))
+    }
+  }
+}
+  
+# functions
+reorder_columns_for_matrix = function(mat, ordered_colnames){
+  ordered_mat = data.frame(row.names=row.names(mat))
+  for (i in ordered_colnames){
+    blocked_mat = mat[,grepl(i, colnames(mat))]
+    ordered_mat = cbind(ordered_mat, blocked_mat)
+  }
+  return(ordered_mat)
+}
+
+first = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[1])}
+second = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[2])}
+third = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[3])}
+fourth = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[4])}
+    
+    
+### color
+  blues <- rev(brewer.pal(9, "Blues"))
+  pal_blues <- colorRampPalette(blues)
+  reds <- rev(brewer.pal(9, "Reds"))
+  pal_reds <- colorRampPalette(reds)
+  colors = c(pal_reds(100)[c(1, 2, 4, 8, 16, 32, 64)],"white",pal_blues(100)[c(64, 32, 16, 8, 4, 2, 1)])
+  pal <- colorRampPalette(rev(colors))
+  
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r jaccard 0, 0-1, 1 category}
+  samples = c("dmel_f_wb_r1", "dmel_m_wb_r1", "dmel_f_go_r1", "dmel_m_go_r1", "dgri_f_wb_r1", "dgri_f_wb_r2", "dgri_m_wb_r1", "dgri_m_wb_r2")
+
+  
+  #jaccard_longlist = data.frame()
+  
+  
+  pacbio_summary = data.frame()
+  end_summary = data.frame()
+  for (sample in samples){
+    
+    # d0 = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/", sample, ".bam.bed"))
+    # dA = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".A.txt"))
+    # colnames(dA) = c("isoseqid", "transid", "intsection", "union", "jaccard")
+    # dB = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".B.txt"))
+    # colnames(dB) = c("isoseqid", "transid", "intsection", "union", "jaccard")
+    # dAB = merge(dA, dB, by="isoseqid")
+    # 
+    # n0 = dim(d0)[1]
+    # nA = dim(dA)[1]
+    # nB = dim(dB)[1]
+    # # Jaccard == 0
+    # j0_A = n0 - nA
+    # j0_B = n0 - nB
+    # 
+    # # Jaccard (0,1)
+    # j01_A = as.numeric(table(dA$jaccard != 1)["TRUE"])
+    # j01_B = as.numeric(table(dB$jaccard != 1)["TRUE"])
+    # 
+    # # Jaccard == 1
+    # j1_A = nA - j01_A
+    # j1_B = nB - j01_B
+    # 
+    # temp_pacbio_summary = data.frame("j0_A" = j0_A, "j0_B" = j0_B, "j01_A" = j01_A, "j01_B" = j01_B, "j1_A" = j1_A, "j1_B" = j1_B)
+    # pacbio_summary = rbind(pacbio_summary, temp_pacbio_summary)
+    
+    # end description
+    eA = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".end.A.txt"))
+    colnames(eA) = c("isoseqid", "transid", "exonnum1", "exonnum2", "five_desc", "three_desc")
+
+    eB = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".end.B.txt"))
+    colnames(eB) = c("isoseqid", "transid", "exonnum1", "exonnum2", "five_desc", "three_desc")
+
+    eAB = merge(eA, eB, by="isoseqid") # after merging only shared AB left, A->x, B->y
+
+    # shared isoseqid
+    tA = table(eAB$five_desc.x, eAB$three_desc.x)
+    tA = addmargins(tA)
+    tA5 = table(eAB$five_desc.x)
+    tA3 = table(eAB$three_desc.x)
+
+    tB5 = table(eAB$five_desc.y)
+    tB3 = table(eAB$three_desc.y)
+    tB = table(eAB$five_desc.y, eAB$three_desc.y)
+    tB = addmargins(tB)
+
+    temp_end_summary = c(tA5, tB5, tA3, tB3)
+    data.frame("j0_A" = j0_A, "j0_B" = j0_B, "j01_A" = j01_A, "j01_B" = j01_B, "j1_A" = j1_A, "j1_B" = j1_B)
+    temp_end_summary = as.data.frame(t(temp_end_summary))[,c(1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16)]
+    end_summary = rbind(end_summary, temp_end_summary)
+  }
+
+  row.names(pacbio_summary) = samples
+  row.names(end_summary) = samples
+  
+```
+
+
