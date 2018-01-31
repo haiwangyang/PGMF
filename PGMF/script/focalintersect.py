@@ -27,13 +27,16 @@ def sum_comma_sep_str(string):
             sum += int(i)
     return sum
 
-def get_id2exonlen(lines):
+def get_id2exonlen_id2line(lines):
     """ id can be pacbio isoseqid or gtf transid """
     id2exonlen = dict()
+    id2line = dict()
     for line in lines:
         (chrom, chromStart, chromEnd, name, score, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts) = line.rstrip().split("\t")        
         id2exonlen[name] = sum_comma_sep_str(blockSizes)
-    return(id2exonlen)
+        id2line[name] = line
+    return(id2exonlen, id2line)
+
 
 """ new range1 """
 range1 = lambda start, end: range(start, end+1)
@@ -189,39 +192,40 @@ class FocalIntersect:
         print("get lines of " + self.filenamePacBioBed)
         self.linesPacBioBed = get_lines("../data/pacbio", self.filenamePacBioBed)
         print("get isoseqid to exonlen ...")
-        self.isoseqid2exonlen = get_id2exonlen(self.linesPacBioBed)        
+        self.isoseqid2exonlen, self.isoseqid2line = get_id2exonlen_id2line(self.linesPacBioBed)        
 
         self.filenameAnnotationBedA = self.species + ".genePred.bed"
         print("get lines of " + self.filenameAnnotationBedA)
         self.linesAnnotationBedA = get_lines("../data/annotation", self.filenameAnnotationBedA)
         print("get gtf's transid to exonlen ...")
-        self.transidA2exonlen = get_id2exonlen(self.linesAnnotationBedA)
+        self.transidA2exonlen, self.transidA2line = get_id2exonlen_id2line(self.linesAnnotationBedA)
         
         self.filenameAnnotationBedB = self.species + ".v3.genePred.bed"
         print("get lines of " + self.filenameAnnotationBedB)
         self.linesAnnotationBedB = get_lines("../data/annotation", self.filenameAnnotationBedB)
         print("get v3.gtf's transid to exonlen ...")
-        self.transidB2exonlen = get_id2exonlen(self.linesAnnotationBedB) 
+        self.transidB2exonlen, self.transidB2line = get_id2exonlen_id2line(self.linesAnnotationBedB) 
+
         
-        self.filenameA = self.name + ".bam.bed.intersect_gtf"
-        self.filenameB = self.name + ".bam.bed.intersect_v3gtf"
+        self.filenameA = self.name + ".bam.gtf.intersect_gtf"
+        self.filenameB = self.name + ".bam.gtf.intersect_v3gtf"
         print("get lines of " + self.filenameA)
         self.linesA = get_lines("../data/pacbio", self.filenameA)
         print("get lines of " + self.filenameB)
         self.linesB = get_lines("../data/pacbio", self.filenameB)
         print("get intersection A info ...")
-        (self.isoseqid2transidA, self.transidA2isoseqid, self.isoseqidtransidA2info) = self.get_intersectinfo("A")
+        (self.isoseqid2transidA, self.transidA2isoseqid) = self.get_intersectinfo("A")
         print("get intersection B info ...")
-        (self.isoseqid2transidB, self.transidB2isoseqid, self.isoseqidtransidB2info) = self.get_intersectinfo("B")
+        (self.isoseqid2transidB, self.transidB2isoseqid) = self.get_intersectinfo("B")
 
         self.isoseqid2besttransidA = self.get_isoseqid2besttransid("A")
         self.isoseqid2besttransidB = self.get_isoseqid2besttransid("B")
         
         """ get jaccard info such as intersection union jaccard for each isoseqid """
         print("get jaccard A info ...")
-        # self.jaccard_infoA = self.get_jaccard_info("A")
+        self.jaccard_infoA = self.get_jaccard_info("A")
         print("get jaccard B info ...")
-        # self.jaccard_infoB = self.get_jaccard_info("B")
+        self.jaccard_infoB = self.get_jaccard_info("B")
         
         """ get end info for each isoseqid """
         print("get end A info ...")
@@ -239,21 +243,21 @@ class FocalIntersect:
         transid2isoseqid = dict()
         isoseqid2exonlen = dict()
         transid2exonlen = dict()
-        isoseqidtransid2info = dict()
 
         for line in lines:
-            (chrom1, chromStart1, chromEnd1, isoseqid, score1, strand1, thickStart1, thickEnd1, itemRgb1, blockCount1, blockSizes1, blockStarts1, chrom2, chromStart2, chromEnd2, transid, score2, strand2, thickStart2, thickEnd2, itemRgb2, blockCount2, blockSizes2, blockStarts2, intersection)  = line.rstrip().split("\t")
-            intersection = int(intersection)
-            if not isoseqid in isoseqid2transid.keys():
-                isoseqid2transid[isoseqid] = set()
-            isoseqid2transid[isoseqid].add(transid)
+            (TCONSID, XLOCID, geneid_transid, overlap_type, isoseqid_raw) = line.rstrip().split("\t")
+            if overlap_type in ["=", "c", "k", "j", "e", "o"]:
+                geneid, transid = geneid_transid.split("|")
+                isoseqid = isoseqid_raw.split("|")[1]
+                if not isoseqid in isoseqid2transid.keys():
+                    isoseqid2transid[isoseqid] = set()
+                isoseqid2transid[isoseqid].add(transid)
            
-            if not transid in transid2isoseqid.keys():
-                transid2isoseqid[transid] = set()
-            transid2isoseqid[transid].add(isoseqid)
+                if not transid in transid2isoseqid.keys():
+                    transid2isoseqid[transid] = set()
+                transid2isoseqid[transid].add(isoseqid)
            
-            isoseqidtransid2info[isoseqid + "." + transid] = line
-        return(isoseqid2transid, transid2isoseqid, isoseqidtransid2info)
+        return(isoseqid2transid, transid2isoseqid)
 
     def get_isoseqid2besttransid(self, gtf_version):
         """ get the transid with the largest overlap """
@@ -269,6 +273,7 @@ class FocalIntersect:
             transids = isoseqid2transid[isoseqid]
             this_transid2exonlen = dict()
             for transid in transids:
+                #print(transid)
                 exonlen = int(transid2exonlen[transid])
                 #print(gtf_version, transid, str(exonlen))    
                 this_transid2exonlen[transid] = exonlen
@@ -280,10 +285,11 @@ class FocalIntersect:
         """ get the end info for isoseq cmp annotation gene model """
         if gtf_version == "A":
             isoseqid2besttransid = self.isoseqid2besttransidA
-            isoseqidtransid2info = self.isoseqidtransidA2info
+            transid2line = self.transidA2line
         elif gtf_version == "B":
             isoseqid2besttransid = self.isoseqid2besttransidB
-            isoseqidtransid2info = self.isoseqidtransidB2info
+            transid2line = self.transidB2line
+        isoseqid2line = self.isoseqid2line
 
         isoseqid2endinfo = dict()
         count = 0
@@ -292,10 +298,11 @@ class FocalIntersect:
                 print(count)
             count += 1
             transid = isoseqid2besttransid[isoseqid]
-            line = isoseqidtransid2info[isoseqid + "." + transid]
             #print("#################################")
             #print(isoseqid, transid, line)
-            (chrom1, chromStart1, chromEnd1, isoseqid, score1, strand1, thickStart1, thickEnd1, itemRgb1, blockCount1, blockSizes1, blockStarts1, chrom2, chromStart2, chromEnd2, transid, score2, strand2, thickStart2, thickEnd2, itemRgb2, blockCount2, blockSizes2, blockStarts2, intersection)  = line.rstrip().split("\t")
+            (chrom1, chromStart1, chromEnd1, isoseqid, score1, strand1, thickStart1, thickEnd1, itemRgb1, blockCount1, blockSizes1, blockStarts1) = isoseqid2line[isoseqid].rstrip().split("\t")
+
+            (chrom2, chromStart2, chromEnd2, transid, score2, strand2, thickStart2, thickEnd2, itemRgb2, blockCount2, blockSizes2, blockStarts2)  = transid2line[transid].rstrip().split("\t")
             chromStart1 = int(chromStart1)
             chromEnd1 = int(chromEnd1)
             chromStart2 = int(chromStart2)
@@ -312,10 +319,11 @@ class FocalIntersect:
         """ get the transid with the largest overlap """
         if gtf_version == "A":
             isoseqid2besttransid = self.isoseqid2besttransidA
-            isoseqidtransid2info = self.isoseqidtransidA2info
+            transid2line = self.transidA2line
         elif gtf_version == "B":
             isoseqid2besttransid = self.isoseqid2besttransidB
-            isoseqidtransid2info = self.isoseqidtransidB2info
+            transid2line = self.transidB2line
+        isoseqid2line = self.isoseqid2line
 
         isoseqid2jaccardinfo = dict()
         count = 0
@@ -324,10 +332,11 @@ class FocalIntersect:
                 print(count)
             count += 1
             transid = isoseqid2besttransid[isoseqid]
-            line = isoseqidtransid2info[isoseqid + "." + transid]
-            print("#################################")
-            print(isoseqid, transid, line)
-            (chrom1, chromStart1, chromEnd1, isoseqid, score1, strand1, thickStart1, thickEnd1, itemRgb1, blockCount1, blockSizes1, blockStarts1, chrom2, chromStart2, chromEnd2, transid, score2, strand2, thickStart2, thickEnd2, itemRgb2, blockCount2, blockSizes2, blockStarts2, intersection)  = line.rstrip().split("\t")
+            #print("#################################")
+            #print(isoseqid, transid, line)
+            (chrom1, chromStart1, chromEnd1, isoseqid, score1, strand1, thickStart1, thickEnd1, itemRgb1, blockCount1, blockSizes1, blockStarts1) = isoseqid2line[isoseqid].rstrip().split("\t")
+
+            (chrom2, chromStart2, chromEnd2, transid, score2, strand2, thickStart2, thickEnd2, itemRgb2, blockCount2, blockSizes2, blockStarts2)  = transid2line[transid].rstrip().split("\t")
             chromStart1 = int(chromStart1)
             chromEnd1 = int(chromEnd1)
             chromStart2 = int(chromStart2)
@@ -367,8 +376,8 @@ class FocalIntersect:
 
 if __name__ == '__main__':
     sample = sys.argv[1] # dmel_f_wb_r1
-    # summarize_jaccard(sample)
-    summarize_end(sample)
+    summarize_jaccard(sample)
+    #summarize_end(sample)
 
     (species, sex, tissue, replicate) = sample.split("_")
     ins = FocalIntersect(species, sex, tissue, replicate)
