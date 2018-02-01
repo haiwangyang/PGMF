@@ -8,7 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 library("pheatmap")
 library("RColorBrewer")
-
+library(ggplot2)
 
 base_path = "/Users/yangh13/PGMF/PGMF/"
 knitr::opts_chunk$set(echo = TRUE)
@@ -69,6 +69,48 @@ fourth = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[4])
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r polyA}
+    d = read.table("/Users/yangh13/PGMF/PGMF/data/output/pacbio.polyA.len.txt", sep=" ")
+    colnames(d) = c("passorfail", "sample", "LR", "common", "len")
+    dd = d[d$passorfail == "pass" & d$LR == "R" & d$common == "A",]
+    
+    pdf("/Users/yangh13/PGMF/PGMF/data/output/polyA.len.distribution.pdf",width=10,height=10)
+    ggplot(dd, aes(len, colour=sample)) + geom_density() + xlim(0, 50)
+    dev.off()
+    
+    count = 1
+    for (sample in unique(dd$sample)){
+      ddd = dd[dd$sample == sample,]
+      h1 = hist(ddd$len,n=100)
+      h1$density = h1$counts/sum(h1$counts)*100
+      print(plot(h1,freq=FALSE, xlim=c(0, 50), col= count, main="", xlab="polyA length",ylab="Frequency"))
+      par(new=TRUE)
+      count = count + 1
+    }
+    #legend("topleft", unique(dd$sample), fill=1:8)
+    dev.off()
+    
+```
+
+
+```{r polyA specific sample dmel_m_go_r1}
+ d = read.table("/Users/yangh13/PGMF/PGMF/data/output/dmel_m_go_r1.isoseq.unmapped.j0.j+.txt", sep="\t")
+ colnames(d) = c("cate", "intronnum", "passorfail", "LR", "common", "polyALen", "isoseqLen")
+ dd = d[d$passorfail == "pass" & d$LR == "R" & d$common == "A",]
+ 
+ pdf("/Users/yangh13/PGMF/PGMF/data/output/dmel_m_go_r1.polyA.len.distribution.pdf",width=5,height=5)
+ ggplot(dd, aes(polyALen, colour=cate)) + geom_density() + xlim(0, 50) + theme_bw()
+ dev.off()
+
+ pdf("/Users/yangh13/PGMF/PGMF/data/output/dmel_m_go_r1.isoseq.len.distribution.pdf",width=5,height=5)
+ ggplot(dd, aes(isoseqLen, colour=cate)) + geom_density() + xlim(0, 5000) + theme_bw()
+ dev.off()
+ 
+pdf("/Users/yangh13/PGMF/PGMF/data/output/dmel_m_go_r1.isoseq.intronnum.distribution.pdf",width=5,height=5)
+ ggplot(dd, aes(intronnum, colour=cate)) + geom_density() + xlim(0, 10) + theme_bw()
+ dev.off()
+```
 
 ```{r jaccard 0, 0-1, 1 category}
   samples = c("dmel_f_wb_r1", "dmel_m_wb_r1", "dmel_f_go_r1", "dmel_m_go_r1", "dgri_f_wb_r1", "dgri_f_wb_r2", "dgri_m_wb_r1", "dgri_m_wb_r2")
