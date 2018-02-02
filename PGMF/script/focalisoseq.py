@@ -85,6 +85,36 @@ def seq2polyA(seq):
         lst2 = ["fail", lst[0], lst[1], str(len(lst[2])), str(len(seq))]
     return lst2
 
+def printout_polyA_len_for_sample(sample):
+    """ print out polyA len and isoseq len for different jaccard type """
+    species, sex, tissue, replicate = sample.split("_")
+    fi = FocalIsoseq(species, sex, tissue, replicate)
+    for isoseqid in fi.jaccard_zero_isoseqid:
+        seq = str(fi.fasta[isoseqid])
+        intronnum = fi.isoseqid2intronnum[isoseqid]
+        print("jaccard==0" + "\t" + str(intronnum) + "\t" + "\t".join(seq2polyA(seq)))
+
+    for isoseqid in fi.jaccard_plus_isoseqid:
+        seq = str(fi.fasta[isoseqid])
+        intronnum = fi.isoseqid2intronnum[isoseqid]
+        print("jaccard>0" + "\t" + str(intronnum) + "\t" + "\t".join(seq2polyA(seq)))
+
+    for isoseqid in fi.unmapped_isoseqid:
+        seq = str(fi.fasta[isoseqid])
+        print("unmapped" + "\t" + "NA" + "\t" + "\t".join(seq2polyA(seq)))
+
+def generate_jaccard_type_isoseqid_bed_for_sample(sample):
+    """ print out isoseq bed for different jaccard type """
+    species, sex, tissue, replicate = sample.split("_")
+    fi = FocalIsoseq(species, sex, tissue, replicate)
+    with open("../data/pacbio/jaccard_zero." + sample + ".bed", "w") as f:
+        for isoseqid in fi.jaccard_zero_isoseqid:
+            f.write(fi.isoseqid2bambedline[isoseqid])
+
+    with open("../data/pacbio/jaccard_plus." + sample + ".bed", "w") as f:
+        for isoseqid in fi.jaccard_plus_isoseqid:
+            f.write(fi.isoseqid2bambedline[isoseqid])
+
 
 class FocalIsoseq:
     """FocalIsoseq object"""
@@ -102,6 +132,7 @@ class FocalIsoseq:
         self.unmapped_isoseqid = self.all_isoseqid - self.mapped_isoseqid
         self.jaccard_plus_isoseqid = self.get_jaccard_plus_isoseqid()
         self.jaccard_zero_isoseqid = self.mapped_isoseqid - self.jaccard_plus_isoseqid
+        self.isoseqid2bambedline = self.get_isoseqid2bambedline()
         self.isoseqid2intronnum = self.get_isoseqid2intronnum()
     
 
@@ -126,6 +157,15 @@ class FocalIsoseq:
             st.add(isoseqid)
         return st
 
+    def get_isoseqid2bambedline(self):
+        lines = get_lines("../data/pacbio", self.sample + ".bam.bed")
+        dct = dict()
+        for line in lines:
+            (chrom, chromStart, chromEnd, position_isoseqid, score, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts) = line.rstrip().split("\t")
+            position, isoseqid = position_isoseqid.split(".")
+            dct[isoseqid] = line
+        return dct            
+
     def get_isoseqid2intronnum(self):
         """ get intron information from bam.bed """
         lines = get_lines("../data/pacbio", self.sample + ".bam.bed")
@@ -144,17 +184,9 @@ if __name__ == '__main__':
     #    printout_polyA_summary(sample)
 
     """ check len distribution of polyA and isoseq """
-    fi = FocalIsoseq("dmel", "m", "go", "r1")
-    for isoseqid in fi.jaccard_zero_isoseqid:
-        seq = str(fi.fasta[isoseqid])
-        intronnum = fi.isoseqid2intronnum[isoseqid]
-        print("jaccard==0" + "\t" + str(intronnum) + "\t" + "\t".join(seq2polyA(seq)))
+    # printout_polyA_len_for_sample("dmel_m_go_r1")
 
-    for isoseqid in fi.jaccard_plus_isoseqid:
-        seq = str(fi.fasta[isoseqid])
-        intronnum = fi.isoseqid2intronnum[isoseqid]
-        print("jaccard>0" + "\t" + str(intronnum) + "\t" + "\t".join(seq2polyA(seq)))
+    for sample in sharedinfo.pacbio_sample:
+        generate_jaccard_type_isoseqid_bed_for_sample(sample)
 
-    for isoseqid in fi.unmapped_isoseqid:
-        seq = str(fi.fasta[isoseqid])
-        print("umapped" + "\t" + "NA" + "\t" + "\t".join(seq2polyA(seq)))
+
