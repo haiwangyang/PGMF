@@ -134,7 +134,7 @@ class FocalIsoseq:
         self.jaccard_zero_isoseqid = self.mapped_isoseqid - self.jaccard_plus_isoseqid
         self.isoseqid2bambedline = self.get_isoseqid2bambedline()
         self.isoseqid2intronnum = self.get_isoseqid2intronnum()
-    
+        self.isoseqid2position = self.get_isoseqid2position()
 
     def get_jaccard_plus_isoseqid(self):
         """ get jaccard > 0 isoseqid """
@@ -165,6 +165,15 @@ class FocalIsoseq:
             position, isoseqid = position_isoseqid.split(".")
             dct[isoseqid] = line
         return dct            
+
+    def get_isoseqid2position(self):
+        lines = get_lines("../data/pacbio", self.sample + ".bam.bed")
+        dct = dict()
+        for line in lines:
+            (chrom, chromStart, chromEnd, position_isoseqid, score, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts) = line.rstrip().split("\t")
+            position, isoseqid = position_isoseqid.split(".")
+            dct[isoseqid] = position
+        return dct
 
     def get_isoseqid2intronnum(self):
         """ get intron information from bam.bed """

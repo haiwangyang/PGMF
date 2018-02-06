@@ -18,9 +18,10 @@ def print_overlaptype_intronnum(sample):
     with open("../data/pacbio/jaccard_zero." + sample + ".exon.gtf.tracking2", "w") as f:
         for isoseqid in ft.isoseqid2overlaptype.keys():
             overlaptype = ft.isoseqid2overlaptype[isoseqid]
+            position = fi.isoseqid2position[isoseqid]
             if isoseqid in fi.isoseqid2intronnum:
                 intronnum = fi.isoseqid2intronnum[isoseqid]
-                f.write(isoseqid + "\t" + overlaptype + "\t" + str(intronnum) + "\n")
+                f.write(position + "\t" + isoseqid + "\t" + overlaptype + "\t" + str(intronnum) + "\n")
 
 class FocalTracking:
     """FocalTracking object"""
@@ -54,9 +55,11 @@ class FocalTracking:
                 strand_geneidtransid = self.geneidtransid2strand[geneidtransid]
             position_isoseqid = other.split("|")[1]
             position, isoseqid = position_isoseqid.split(".")
-            strand_isoseqid = isoseqid.split(".")[0][-1]
+
+            strand_isoseqid = position[-1]
 
             if type == "i": # inside annotated intron
+                print (strand_geneidtransid, strand_isoseqid, line)
                 if strand_geneidtransid != strand_isoseqid: # anti_strand inside annotated intron:
                     dct[isoseqid] = "pass_ia"
                 else:                                       # sense_strand inside annotated intron:
@@ -71,5 +74,6 @@ class FocalTracking:
 
 
 if __name__ == '__main__':
-    for sample in sharedinfo.pacbio_sample:
-        print_overlaptype_intronnum(sample)
+    ft = FocalTracking("dmel", "m", "go", "r1")
+#    for sample in sharedinfo.pacbio_sample:
+#        print_overlaptype_intronnum(sample)
