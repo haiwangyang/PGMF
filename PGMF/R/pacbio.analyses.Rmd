@@ -119,63 +119,90 @@ pdf("/Users/yangh13/PGMF/PGMF/data/output/dmel_m_go_r1.isoseq.intronnum.distribu
   #jaccard_longlist = data.frame()
   
   
-  pacbio_summary = data.frame()
-  end_summary = data.frame()
+  dB_jaccard = data.frame()
   for (sample in samples){
+    species = first(sample)
+    d0 = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/", sample, ".bam.bed"))
+    dA = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".A.txt"))
+    colnames(dA) = c("isoseqid", "transid", "intsection", "union", "jaccard")
+    dB = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".B.txt"))
+    colnames(dB) = c("isoseqid", "transid", "intsection", "union", "jaccard")
+    dAB = merge(dA, dB, by="isoseqid")
+
+    dB_jaccard0 = data.frame(jaccard = dB$jaccard, species=species, sample=sample)
+    dB_jaccard = rbind(dB_jaccard, dB_jaccard0)
     
-    # d0 = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/", sample, ".bam.bed"))
-    # dA = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".A.txt"))
-    # colnames(dA) = c("isoseqid", "transid", "intsection", "union", "jaccard")
-    # dB = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".B.txt"))
-    # colnames(dB) = c("isoseqid", "transid", "intsection", "union", "jaccard")
-    # dAB = merge(dA, dB, by="isoseqid")
-    # 
-    # n0 = dim(d0)[1]
-    # nA = dim(dA)[1]
-    # nB = dim(dB)[1]
-    # # Jaccard == 0
-    # j0_A = n0 - nA
-    # j0_B = n0 - nB
-    # 
-    # # Jaccard (0,1)
-    # j01_A = as.numeric(table(dA$jaccard != 1)["TRUE"])
-    # j01_B = as.numeric(table(dB$jaccard != 1)["TRUE"])
-    # 
-    # # Jaccard == 1
-    # j1_A = nA - j01_A
-    # j1_B = nB - j01_B
-    # 
-    # temp_pacbio_summary = data.frame("j0_A" = j0_A, "j0_B" = j0_B, "j01_A" = j01_A, "j01_B" = j01_B, "j1_A" = j1_A, "j1_B" = j1_B)
-    # pacbio_summary = rbind(pacbio_summary, temp_pacbio_summary)
-    
-    # end description
-    eA = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".end.A.txt"))
-    colnames(eA) = c("isoseqid", "transid", "exonnum1", "exonnum2", "five_desc", "three_desc")
-
-    eB = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".end.B.txt"))
-    colnames(eB) = c("isoseqid", "transid", "exonnum1", "exonnum2", "five_desc", "three_desc")
-
-    eAB = merge(eA, eB, by="isoseqid") # after merging only shared AB left, A->x, B->y
-
-    # shared isoseqid
-    tA = table(eAB$five_desc.x, eAB$three_desc.x)
-    tA = addmargins(tA)
-    tA5 = table(eAB$five_desc.x)
-    tA3 = table(eAB$three_desc.x)
-
-    tB5 = table(eAB$five_desc.y)
-    tB3 = table(eAB$three_desc.y)
-    tB = table(eAB$five_desc.y, eAB$three_desc.y)
-    tB = addmargins(tB)
-
-    temp_end_summary = c(tA5, tB5, tA3, tB3)
-    data.frame("j0_A" = j0_A, "j0_B" = j0_B, "j01_A" = j01_A, "j01_B" = j01_B, "j1_A" = j1_A, "j1_B" = j1_B)
-    temp_end_summary = as.data.frame(t(temp_end_summary))[,c(1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16)]
-    end_summary = rbind(end_summary, temp_end_summary)
-  }
-
-  row.names(pacbio_summary) = samples
-  row.names(end_summary) = samples
+    z0 = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/jaccard_zero.", sample , ".bed"))
+    dB_jaccard1 = data.frame(jaccard = rep(0, dim(z0)[1]), species=species, sample=sample)
+    dB_jaccard = rbind(dB_jaccard, dB_jaccard1)
+  }  
+  
+  
+  pdf("/Users/yangh13/PGMF/PGMF/data/output/jaccard.distribution.pdf",width=5,height=5)
+  ggplot(dB_jaccard, aes(jaccard, colour=species)) + geom_density() + xlim(0, 1) + theme_bw()
+  dev.off()
+  
+  
+  # pacbio_summary = data.frame()
+  # end_summary = data.frame()
+  # 
+  # dB_jaccard = data.frame()
+  # for (sample in samples){
+  #   species = first(sample)
+  #   d0 = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/", sample, ".bam.bed"))
+  #   dA = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".A.txt"))
+  #   colnames(dA) = c("isoseqid", "transid", "intsection", "union", "jaccard")
+  #   dB = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".B.txt"))
+  #   colnames(dB) = c("isoseqid", "transid", "intsection", "union", "jaccard")
+  #   dAB = merge(dA, dB, by="isoseqid")
+  #   
+  #   n0 = dim(d0)[1]
+  #   nA = dim(dA)[1]
+  #   nB = dim(dB)[1]
+  #   # Jaccard == 0
+  #   j0_A = n0 - nA
+  #   j0_B = n0 - nB
+  # 
+  #   # Jaccard (0,1)
+  #   j01_A = as.numeric(table(dA$jaccard != 1)["TRUE"])
+  #   j01_B = as.numeric(table(dB$jaccard != 1)["TRUE"])
+  # 
+  #   # Jaccard == 1
+  #   j1_A = nA - j01_A
+  #   j1_B = nB - j01_B
+  # 
+  #   
+  #   temp_pacbio_summary = data.frame("j0_A" = j0_A, "j0_B" = j0_B, "j01_A" = j01_A, "j01_B" = j01_B, "j1_A" = j1_A, "j1_B" = j1_B)
+  #   pacbio_summary = rbind(pacbio_summary, temp_pacbio_summary)
+  #   
+  #   # # end description
+  #   # eA = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".end.A.txt"))
+  #   # colnames(eA) = c("isoseqid", "transid", "exonnum1", "exonnum2", "five_desc", "three_desc")
+  #   # 
+  #   # eB = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".end.B.txt"))
+  #   # colnames(eB) = c("isoseqid", "transid", "exonnum1", "exonnum2", "five_desc", "three_desc")
+  #   # 
+  #   # eAB = merge(eA, eB, by="isoseqid") # after merging only shared AB left, A->x, B->y
+  #   # 
+  #   # # shared isoseqid
+  #   # tA = table(eAB$five_desc.x, eAB$three_desc.x)
+  #   # tA = addmargins(tA)
+  #   # tA5 = table(eAB$five_desc.x)
+  #   # tA3 = table(eAB$three_desc.x)
+  #   # 
+  #   # tB5 = table(eAB$five_desc.y)
+  #   # tB3 = table(eAB$three_desc.y)
+  #   # tB = table(eAB$five_desc.y, eAB$three_desc.y)
+  #   # tB = addmargins(tB)
+  #   # 
+  #   # temp_end_summary = c(tA5, tB5, tA3, tB3)
+  #   # data.frame("j0_A" = j0_A, "j0_B" = j0_B, "j01_A" = j01_A, "j01_B" = j01_B, "j1_A" = j1_A, "j1_B" = j1_B)
+  #   # temp_end_summary = as.data.frame(t(temp_end_summary))[,c(1,5,9,13,2,6,10,14,3,7,11,15,4,8,12,16)]
+  #   # end_summary = rbind(end_summary, temp_end_summary)
+  # }
+  # 
+  # row.names(pacbio_summary) = samples
+  # row.names(end_summary) = samples
   
 ```
 
