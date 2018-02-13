@@ -59,7 +59,7 @@ class FocalTracking:
             strand_isoseqid = position[-1]
 
             if type == "i": # inside annotated intron
-                print (strand_geneidtransid, strand_isoseqid, line)
+                #print (strand_geneidtransid, strand_isoseqid, line)
                 if strand_geneidtransid != strand_isoseqid: # anti_strand inside annotated intron:
                     dct[isoseqid] = "pass_ia"
                 else:                                       # sense_strand inside annotated intron:
@@ -74,6 +74,5 @@ class FocalTracking:
 
 
 if __name__ == '__main__':
-    ft = FocalTracking("dmel", "m", "go", "r1")
-#    for sample in sharedinfo.pacbio_sample:
-#        print_overlaptype_intronnum(sample)
+    for sample in sharedinfo.pacbio_sample:
+        print_overlaptype_intronnum(sample)

@@ -107,10 +107,11 @@ When you click the **Knit** button a document will be generated that includes bo
  ggplot(dd, aes(isoseqLen, colour=cate)) + geom_density() + xlim(0, 5000) + theme_bw()
  dev.off()
  
-pdf("/Users/yangh13/PGMF/PGMF/data/output/dmel_m_go_r1.isoseq.intronnum.distribution.pdf",width=5,height=5)
+ pdf("/Users/yangh13/PGMF/PGMF/data/output/dmel_m_go_r1.isoseq.intronnum.distribution.pdf",width=5,height=5)
  ggplot(dd, aes(intronnum, colour=cate)) + geom_density() + xlim(0, 10) + theme_bw()
  dev.off()
 ```
+
 
 ```{r jaccard 0, 0-1, 1 category}
   samples = c("dmel_f_wb_r1", "dmel_m_wb_r1", "dmel_f_go_r1", "dmel_m_go_r1", "dgri_f_wb_r1", "dgri_f_wb_r2", "dgri_m_wb_r1", "dgri_m_wb_r2")
