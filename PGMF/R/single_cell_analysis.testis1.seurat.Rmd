@@ -1,0 +1,186 @@
+---
+title: "pacbio.analyses"
+author: "Haiwang Yang"
+date: "1/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(Seurat)
+library(dplyr)
+library(Matrix)
+
+base_path = "/Users/yangh13/PGMF/PGMF/"
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r prepare annotation related stuff}
+chrom2geneid = read.table("/Users/yangh13/PGMF/PGMF/data/annotation/dmel.v3_plus_pacbio.chrom2geneid")
+colnames(chrom2geneid) = c("chrom", "geneid")
+
+# Get genes on mitochondria DNA
+onM = as.character(chrom2geneid$geneid[chrom2geneid$chrom == "mitochondrion_genome"])
+
+
+
+onNew = read.table("/Users/yangh13/PGMF/PGMF/data/pacbio/pacbio_new_gene_model.bam.bed")
+onNew = as.character(unlist(onNew[4]))
+
+
+```
+
+
+
+
+```{r load single cell dataset, filter, normalize}
+# Load the PBMC dataset
+pbmc.data <- Read10X(data.dir = "/Users/yangh13/PGMF/PGMF/data/singlecell/testis1/outs/filtered_gene_bc_matrices/dmel_v3_plus_pacbio")
+
+
+# Initialize the Seurat object with the raw (non-normalized data).
+# Keep all genes expressed in >= 3 cells (~0.1% of the data). Keep all cells with at least 200 detected genes
+pbmc <- CreateSeuratObject(raw.data = pbmc.data, min.cells = 3, min.genes = 200, 
+    project = "10X_PBMC")
+
+# calculate the percent genes on chrom M
+mask = row.names(pbmc@raw.data) %in% onM
+percent.mito <- Matrix::colSums(pbmc@raw.data[mask, ]/Matrix::colSums(pbmc@raw.data)) * 100
+pbmc <- AddMetaData(object = pbmc, metadata = percent.mito, col.name = "percent_mito")
+
+# AddMetaData adds columns to object@meta.data, and is a great place to
+# stash QC stats
+pbmc <- AddMetaData(object = pbmc, metadata = percent.mito, col.name = "percent.mito")
+VlnPlot(object = pbmc, features.plot = c("nGene", "nUMI", "percent.mito"), nCol = 3)
+
+# GenePlot is typically used to visualize gene-gene relationships, but can
+# be used for anything calculated by the object, i.e. columns in
+# object@meta.data, PC scores etc.  Since there is a rare subset of cells
+# with an outlier level of high mitochondrial percentage and also low UMI
+# content, we filter these as well
+par(mfrow = c(1, 2))
+GenePlot(object = pbmc, gene1 = "nUMI", gene2 = "percent.mito")
+GenePlot(object = pbmc, gene1 = "nUMI", gene2 = "nGene")
+
+
+# We filter out cells that have unique gene counts over 2,500 or less than
+# 200 Note that low.thresholds and high.thresholds are used to define a
+# 'gate' -Inf and Inf should be used if you don't want a lower or upper
+# threshold.
+# [default] 
+# pbmc <- FilterCells(object = pbmc, subset.names = c("nGene", "percent.mito"), low.thresholds = c(200, -Inf), high.thresholds = c(2500, 0.05))
+pbmc <- FilterCells(object = pbmc, subset.names = c("nGene"),  low.thresholds = c(200), high.thresholds = c(6000))
+
+
+# Normalization
+# Next we normalized the data. Seurat's normalizes gene expression by the total expression for each cell, multiplies by a scaling factors (10,000), and takes the natural log.
+pbmc = NormalizeData(object=pbmc, normalization.method="LogNormalize", scale.factor=1e4)
+norm = as.data.frame(as.matrix(pbmc@data))
+
+```
+
+
+```{r variable genes, Dimensionality Reduction (PCA) and Non-linear dimensionality reduction (tSNE)}
+# variable genes
+# Next Seurat identifies variable genes for use in downstream analysis. For doing differential expression and clustering focusing on the variable genes speeds up analysis. First, average expression and dispersion (variation) are calculated for each gene. Then genes are binned controlling for the relationship between variability and average expression. Here we select genes (n=2,588) in the white area to carry through to the analysis.
+pbmc = FindVariableGenes(object=pbmc, mean.function=ExpMean, dispersion.function=LogVMR, do.plot=FALSE,x.low.cutoff=0.01, 
+                           x.high.cutoff=3, 
+                           y.cutoff=0.5,
+                           y.high.cutoff=Inf
+                          )
+dispersion = as.data.frame(as.matrix(pbmc@hvg.info))
+
+
+# Scaling and regressing out unwanted sources of variation
+# Next we regress out variability due to the number of UMI. To remove these 'unwanted' sources of variability, Seurat constructs a linear model and predicts gene expression based on the selected variables (i.e., nUMI). The scaled z-scores of the residuals are then used for dimensionality reduction and clustering.
+pbmc = ScaleData(object=pbmc, vars.to.regress=c("nUMI"), display.progress=FALSE)
+
+
+
+# Dimensionality Reduction
+# Next we use PCA to reduce the dimensionality of the dataset. Selection of the number of principal components can be tricky. Here I looked at a variety of metrics and selected 30 PC's for use in remaining analysis.
+# First I show the typical PCA plot with PC1 vs PC2. As previously discussed, most genes have very low expression/variability and end up clustered near 0. There is a set of a few genes that show a lot of spread on PC1 and a different set that show spread on PC2. Next, I show the top 30 genes with the largest loadings for PC1 and PC2. These genes should be the most variable genes in the data set. Most of them are CGS, but vas stands out. Looking at the Elbow plot and Jackstraw plots, using 30 PCs seems reasonable.
+pbmc = RunPCA(object=pbmc, pc.genes=pbmc@var.genes, do.print=FALSE, 
+                pcs.print=1:5, genes.print=5, pcs.compute=100)
+
+# ProjectPCA scores each gene in the dataset (including genes not included in the PCA) based on their correlation
+# with the calculated components. Though we don't use this further here, it can be used to identify markers that
+# are strongly correlated with cellular heterogeneity, but may not have passed through variable gene selection.
+# The results of the projected PCA can be explored by setting use.full=T in the functions above
+pbmc = ProjectPCA(object=pbmc, do.print=FALSE)
+pca_res = as.data.frame(pbmc@dr$pca@cell.embeddings)
+gene_loadings = as.data.frame(pbmc@dr$pca@gene.loadings)
+pca_stdev = pbmc@dr$pca@sdev
+
+PrintPCA(object = pbmc, pcs.print = 1:5, genes.print = 5, use.full = FALSE)
+VizPCA(object = pbmc, pcs.use = 1:2)
+PCAPlot(object = pbmc, dim.1 = 1, dim.2 = 2)
+
+# In particular PCHeatmap allows for easy exploration of the primary sources of heterogeneity in a dataset, and can be useful when trying to decide which PCs to include for further downstream analyses. Both cells and genes are ordered according to their PCA scores. Setting cells.use to a number plots the ‘extreme’ cells on both ends of the spectrum, which dramatically speeds plotting for large datasets. Though clearly a supervised analysis, we find this to be a valuable tool for exploring correlated gene sets.
+PCHeatmap(object = pbmc, pc.use = 1, cells.use = 500, do.balanced = TRUE, label.columns = FALSE)
+PCHeatmap(object = pbmc, pc.use = 1:12, cells.use = 500, do.balanced = TRUE, 
+    label.columns = FALSE, use.full = FALSE)
+
+
+# Determine statistically significant principal components
+# To overcome the extensive technical noise in any single gene for scRNA-seq data, Seurat clusters cells based on their PCA scores, with each PC essentially representing a ‘metagene’ that combines information across a correlated gene set. Determining how many PCs to include downstream is therefore an important step.
+
+# In Macosko et al, we implemented a resampling test inspired by the jackStraw procedure. We randomly permute a subset of the data (1% by default) and rerun PCA, constructing a ‘null distribution’ of gene scores, and repeat this procedure. We identify ‘significant’ PCs as those who have a strong enrichment of low p-value genes.
+
+# NOTE: This process can take a long time for big datasets, comment out for
+# expediency.  More approximate techniques such as those implemented in
+# PCElbowPlot() can be used to reduce computation time
+pbmc = JackStraw(object=pbmc, num.replicate=100, do.print=FALSE, num.pc=40)
+
+# A more ad hoc method for determining which PCs to use is to look at a plot of the standard deviations of the principle components and draw your cutoff where there is a clear elbow in the graph. This can be done with PCElbowPlot. In this example, it looks like the elbow would fall around PC 9.
+PCElbowPlot(object = pbmc)
+
+
+
+# Cluster the cells
+# Clusters are generated using a graphical K-nearest neighbors approach. This approach draws edges between cells with a similar expression pattern. It then tries to partition connected cells based on their local neighborhoods. For clustering I use the 30 PCs.
+pbmc = FindClusters(object=pbmc, reduction.type="pca", dims.use=1:30, 
+                      resolution=0.6, print.output=0, save.SNN=TRUE)
+PrintFindClustersParams(object=pbmc)
+
+# While we do provide function-specific printing functions, the more general function to
+# print calculation parameters is PrintCalcParams().
+ident = as.data.frame(pbmc@ident)
+colnames(ident) = c('ident')
+
+# Non-linear dimensionality reduction (tSNE)
+# Finally we can perform a non-linear dimensionality reduction, also using the PCs, and project these into 2-dimensional space using tSNE.
+pbmc = RunTSNE(object=pbmc, dims.use=1:30, do.fast=TRUE)
+
+tsne = as.data.frame(pbmc@dr$tsne@cell.embeddings)
+
+# note that you can set do.label=T to help label individual clusters
+pdf("/Users/yangh13/PGMF/PGMF/data/output/single_cell.cell_type.pdf", width=5, height=2.5, onefile = FALSE, useDingbats = FALSE)
+TSNEPlot(object = pbmc)
+dev.off()
+
+CCS.geneid = row.names(norm)[grepl("CCS", row.names(norm))]
+
+NewCCS.geneid = CCS.geneid[CCS.geneid %in% onNew]
+
+pdf("/Users/yangh13/PGMF/PGMF/data/output/single_cell.new_pacbio.cell_type.pdf", width=100, height=100)
+FeaturePlot(object = pbmc, features.plot = NewCCS.geneid, cols.use = c("grey", "red"), 
+    reduction.use = "tsne", pt.size=10)
+dev.off()
+
+
+```
+
+```{r summary of single cell sequencing}
+nCells = dim(pbmc@meta.data)[1]
+meta_data = as.data.frame(pbmc@meta.data)
+raw_data = as.data.frame(as.matrix(pbmc@raw.data))
+```
+
+
+```{r pacbio isoseq genes}
+# calculate the percent genes of CCS or PacBio_Isoseq
+CCS.genes <- grep(pattern = "CCS", x = rownames(x = pbmc@data), value = TRUE)
+percent.CCS <- Matrix::colSums(pbmc@raw.data[CCS.genes, ])/Matrix::colSums(pbmc@raw.data)
+
+```
+
