@@ -52,7 +52,11 @@ def get_all_possible_protein(seq):
         start = i_s    
     return(dct)
 
-if __name__ == '__main__':
+def print_out_all_possible_peptide():
+    """ read transcript sequence (most of them "non-coding")
+        translate the whole transcript into protein with many M and * (three phases)
+        print out all possible short peptides within it that make sense
+    """
     fasta = Fasta("../data/pacbio/pacbio_new_gene_model.fasta", duplicate_action="longest")
     with open("../data/pacbio/pacbio_new_gene_model.all_phase_peptide.fasta", "w") as f:
         for name in fasta.keys():
@@ -61,3 +65,7 @@ if __name__ == '__main__':
                 dct_all_peptide = get_all_possible_protein(focalgene.get_pep_and_leftover_from_dna(seq, i)[0])
                 for r in dct_all_peptide.keys():
                     f.write(">" + name + "=" + str(i) + "=" + r + "\n" + dct_all_peptide[r] + "\n")
+
+if __name__ == '__main__':
+    print_out_all_possible_peptide()
+    
