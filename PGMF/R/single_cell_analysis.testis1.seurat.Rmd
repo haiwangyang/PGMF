@@ -162,9 +162,9 @@ CCS.geneid = row.names(norm)[grepl("CCS", row.names(norm))]
 
 NewCCS.geneid = CCS.geneid[CCS.geneid %in% onNew]
 
-pdf("/Users/yangh13/PGMF/PGMF/data/output/single_cell.new_pacbio.cell_type.pdf", width=100, height=100)
+pdf("/Users/yangh13/PGMF/PGMF/data/output/single_cell.new_pacbio.cell_type.pdf", width=150, height=150)
 FeaturePlot(object = pbmc, features.plot = NewCCS.geneid, cols.use = c("grey", "red"), 
-    reduction.use = "tsne", pt.size=10)
+    reduction.use = "tsne", pt.size=4)
 dev.off()
 
 
