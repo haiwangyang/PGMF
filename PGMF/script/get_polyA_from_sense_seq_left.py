@@ -3,7 +3,7 @@ from pyfaidx import Fasta
 
 def main():
     """ read fasta of 26bp seq of 3' pacbio transcript """
-    fasta = Fasta("../data/pacbio/pacbio_new_gene_model.bam.down26.fasta")
+    fasta = Fasta("../data/pacbio/pacbio_new_gene_model.bam.down26.fasta", duplicate_action="longest")
     for name in fasta.keys():
         seq = fasta[name]
         print(name)
