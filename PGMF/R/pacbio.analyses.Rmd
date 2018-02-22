@@ -215,9 +215,8 @@ When you click the **Knit** button a document will be generated that includes bo
 ```
 
 
-```{r manually curated novel pacbio gene models}
+```{r manually curated novel pacbio gene models (dmel)}
 # fancy heatmap
-
 all_expression_matrix = data.frame()
 for (sample in c("dmel_f_go_r1", "dmel_m_wb_r1", "dmel_m_go_r1", "dmel_f_wb_r1")){
   d = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/expression/", sample, ".expression.nrc.txt"))
@@ -279,4 +278,52 @@ dev.off()
 # sorted by peptide length
 d[order(d$len_peptide, decreasing = TRUE),]
 
+```
+
+
+```{r manually curated novel pacbio gene models (non-dmel)}
+all_together = data.frame(row.names=manual_isoseqid)
+for (dxxx in strains_in_final_order[3:10]){ 
+  # fancy heatmap
+  all_expression_matrix = data.frame()
+  for (sample in c("dmel_f_go_r1", "dmel_m_wb_r1", "dmel_m_go_r1", "dmel_f_wb_r1")){
+    d = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/expression/", dxxx, ".expression.nrc.", sample, ".txt"))
+    all_expression_matrix = rbind(all_expression_matrix, d)
+  }
+  
+  manual_d = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/pacbio_new_gene_model.tab"), sep="\t")
+  colnames(manual_d) = c("sample", "intron", "isoseqid", "coding", "conservation", "intergenic")
+  row.names(manual_d) = manual_d$isoseqid 
+  manual_d = manual_d[manual_isoseqid,]
+  manual_cate = manual_d[,c("intron", "coding", "conservation", "intergenic")]
+  
+  # convert cate into number
+  manual_cate[,1] = as.integer(manual_cate[,1])
+  manual_cate[,2] = as.integer(manual_cate[,2])  
+  manual_cate[,3] = as.integer(manual_cate[,3])
+  manual_cate[,4] = as.integer(manual_cate[,4])
+  
+  manual_isoseqid = as.character(unlist(manual_d$isoseqid))
+  manual_expression_matrix = as.matrix(all_expression_matrix[row.names(all_expression_matrix) %in% manual_isoseqid,])
+  manual_expression_matrix = log2(manual_expression_matrix + 1)
+  
+  # convert manual_expression_matrix tissue format (only w1118 and ordered tissue)
+  mm = manual_expression_matrix
+  cn = colnames(mm)
+  mmm = data.frame("row.names" = row.names(mm))
+  for (t in tissue8_in_final_order){
+    for (s in c("f", "m")){
+      mmm = cbind(mmm, mm[,grepl(paste0("_", t, "_"), cn) & grepl(dxxx, cn) & grepl(paste0("_", s, "_"), cn)])
+    }
+  }
+  all_together = cbind(all_together, mmm[manual_isoseqid,])
+}
+
+
+  pdf(paste0("/Users/yangh13/PGMF/PGMF/data/output/heatmap.expression.manual.non_dmel_all_together.pdf"), width=30, height=10, onefile = FALSE)
+  pheatmap(all_together, color=pal(100), cluster_rows=FALSE, show_rownames=TRUE, cluster_cols=FALSE, show_colnames = TRUE, fosize=10, legend = TRUE)
+  #pheatmap(mm, color=pal(100), cluster_rows=FALSE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=0.1, legend = FALSE, breaks=seq(-b,b,length.out=100))
+  #pheatmap(as.matrix(manual_cate), cluster_rows=FALSE, cluster_cols = FALSE, color = palbw(100))
+  dev.off()
+  
 ```

@@ -36,7 +36,10 @@ def fetch_big_file_from_helix_ftp(folder, filename):
         for line in data:
             f.write(line.decode('UTF-8'))
 
-if __name__ == '__main__':
+def main():
     fetch_big_file_from_helix_ftp("dper.fasta")
     fetch_big_file_from_helix_ftp("dper.SVGpredAdded.v2.gtf")
     fetch_big_file_from_helix_ftp("dper.expression.nrc.tab")
+
+if __name__ == '__main__':
+    main()
