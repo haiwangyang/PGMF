@@ -37,7 +37,7 @@ for (tissue in tissue8_in_final_order){
     }
   }
 }
-  
+
 # functions
 reorder_columns_for_matrix = function(mat, ordered_colnames){
   ordered_mat = data.frame(row.names=row.names(mat))
@@ -53,7 +53,7 @@ second = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[2])
 third = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[3])}
 fourth = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[4])}
     
-    
+
 ### color
   blues <- rev(brewer.pal(9, "Blues"))
   pal_blues <- colorRampPalette(blues)
@@ -125,31 +125,62 @@ When you click the **Knit** button a document will be generated that includes bo
 
   
   #jaccard_longlist = data.frame()
-  
-  
+  dA_jaccard = data.frame()
   dB_jaccard = data.frame()
   for (sample in samples){
+    print(sample)
     species = first(sample)
     d0 = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/", sample, ".bam.bed"))
+    
     dA = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".A.txt"))
     colnames(dA) = c("isoseqid", "transid", "intsection", "union", "jaccard")
+    
     dB = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/output/", sample, ".B.txt"))
     colnames(dB) = c("isoseqid", "transid", "intsection", "union", "jaccard")
+    
     dAB = merge(dA, dB, by="isoseqid")
-
+    
+    dA_jaccard0 = data.frame(jaccard = dA$jaccard, species=species, sample=sample)
+    dA_jaccard = rbind(dA_jaccard, dA_jaccard0)
+    
     dB_jaccard0 = data.frame(jaccard = dB$jaccard, species=species, sample=sample)
     dB_jaccard = rbind(dB_jaccard, dB_jaccard0)
     
-    z0 = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/jaccard_zero.", sample , ".bed"))
-    dB_jaccard1 = data.frame(jaccard = rep(0, dim(z0)[1]), species=species, sample=sample)
+    
+    z0 = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/pacbio/", sample, ".bam.bed"))
+    N = dim(z0)[1]
+    
+    dA_jaccard1 = data.frame(jaccard = rep(0, N - dim(dA)[1]), species=species, sample=sample)
+    dA_jaccard = rbind(dA_jaccard, dA_jaccard1)
+    
+    dB_jaccard1 = data.frame(jaccard = rep(0, N - dim(dB)[1]), species=species, sample=sample)
     dB_jaccard = rbind(dB_jaccard, dB_jaccard1)
   }  
   
   
-  pdf("/Users/yangh13/PGMF/PGMF/data/output/jaccard.distribution.pdf",width=5,height=5)
+  pdf("/Users/yangh13/PGMF/PGMF/data/output/jaccard.distribution.pdf",width=5,height=5, useDingbats = FALSE)
+  ggplot(dA_jaccard, aes(jaccard, colour=species)) + geom_density() + xlim(0, 1) + theme_bw()
   ggplot(dB_jaccard, aes(jaccard, colour=species)) + geom_density() + xlim(0, 1) + theme_bw()
+  ggplot(dA_jaccard, aes(species, jaccard)) + geom_boxplot(notch=TRUE) + ylim(0, 1) + theme_bw()
+  ggplot(dB_jaccard, aes(species, jaccard)) + geom_boxplot(notch=TRUE) + ylim(0, 1) + theme_bw()
   dev.off()
   
+  dA_jaccard_dgri = dA_jaccard[dA_jaccard$species == "dgri",]
+  dB_jaccard_dgri = dB_jaccard[dB_jaccard$species == "dgri",]
+  
+  # jaccard==0 transcript became less
+  tabA = table(dA_jaccard_dgri$jaccard == 0)
+  tabA["TRUE"]/sum(tabA)
+  
+  tabB = table(dB_jaccard_dgri$jaccard == 0)
+  tabB["TRUE"]/sum(tabB)
+  
+  # jaccard>0.75 transcript became more
+  tabA = table(dA_jaccard_dgri$jaccard > 0.75)
+  tabA["TRUE"]/sum(tabA)
+  
+  tabB = table(dB_jaccard_dgri$jaccard > 0.75)
+  tabB["TRUE"]/sum(tabB)
   
   # pacbio_summary = data.frame()
   # end_summary = data.frame()

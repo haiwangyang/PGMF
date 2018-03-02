@@ -53,6 +53,22 @@ def summarize_gene_merge():
                     dct_merge[2] += 1
             f.write(species + "\t" + str(dct_merge[1]) + "\t" + str(dct_merge[2]) + "\n")
 
+def remove_redundancy_in_dict(dct):
+    """ 
+       input dct: "a" = {"a1"}, "b" = {"b1", "b2"}
+       only one2one key2value were kept in the dict
+       output dct: "a" = {"a1"}
+    """
+    dct_u = dict()
+    for i in dct.keys():
+        ii = dct[i]
+        if len(ii) == 1:
+            dct_u[i] = list(ii)[0]
+    return(dct_u)
+
+def switch_key_value_in_dict(dct):
+    return({y:x for x,y in dct.items()})
+
 class FocalAnnotation:
     """FocalAnnotation object"""
     def __init__(self, species):
@@ -60,30 +76,72 @@ class FocalAnnotation:
         # self.filename = species + ".SVGpredAdded.v2.gtf"
         self.filename = species + ".v3.gtf"
         self.lines = get_lines("../data/annotation", self.filename)
-        
+        self.GdxxxID = self.get_geneid_from_annotation(ver="new")        
+
         # old annotation (to compare)
         self.oldfilename = species + ".gtf"
         self.oldlines = get_lines("../data/annotation", self.oldfilename)
- 
+        self.dxxxFBgn = self.get_geneid_from_annotation(ver="old")
+
         # compare updated annotation with old (postive v3 vs old-gtf; negative old-gtf vs v3)
         self.statspositivelines = get_lines("../data/annotation", species + ".statspositive")
         self.statsnegativelines = get_lines("../data/annotation", species + ".statsnegative")
         self.stats = self.get_stats()
         self.tmaplines = get_lines("../data/annotation", species + ".v3.gtf.tmap")
-        self.old2new_geneid, self.new2old_geneid = self.get_tmap()
+        self.dxxxFBgn2GdxxxID, self.GdxxxID2dxxxFBgn = self.get_tmap()
 
-        # there are ortholog one2one
+        # there are ortholog one2one (GdxxxID 2 dxxxFBgn 2 dmelFBgn)
         self.filenameolo121 = species + ".concise.one2one"        
         self.linesolo121 = get_lines("../data/ortholog", self.filenameolo121)
-        self.olo121 = self.get_old_ortholog_121()
+        (self.GdxxxID2dmelFBgn, self.dxxxFBgn2dmelFBgn) = self.get_olo121_info()
 
-        # there are some newly identified orthologs 121
+
+        # these dmelFBgn lost one2one due to annotation update, and I need to use dxxxFBgn 
+        self.lost1_dmelFBgn = set(self.dxxxFBgn2dmelFBgn.values()) - set(self.GdxxxID2dmelFBgn.values())
+        self.lost1_dxxxFBgn = set([switch_key_value_in_dict(self.dxxxFBgn2dmelFBgn)[i] for i in self.lost1_dmelFBgn])
+
+        ## there are some newly identified orthologs 121
         self.filenameneo121 = species + ".neo121"
         self.linesneo121 = get_lines("../data/ortholog", self.filenameneo121)
+        self.add_neo_to_GdxxxID2dmelFBgn()
 
-        self.geneid, self.refgeneid, self.geneid2refgeneid, self.refgeneid2geneid  = self.get_geneidtable()
-        self.geneid2refgeneid121, self.refgeneid2geneid121 = self.get_121_id()
+
         
+    def get_geneid_from_annotation(self, ver="new"):
+        """ get all geneid as set() """
+        lines = self.lines
+        if ver == "old":
+            lines = self.oldlines
+
+        st = set()
+        for line in lines:
+            (scaffold, tag, feature, start, end, scoare, strand, dot, others) = line.rstrip().split("\t")
+            this_geneid = get_id(others, 'gene_id')
+            st.add(this_geneid)
+        return(st) 
+
+    def get_new2ref_old_geneid(self):
+        """ new2old_geneid
+            replace old_geneid (dxxx FBgn) to ref_old_geneid (dmel FBgn)
+            by olo121 table
+        """
+        dct = dict()
+        for i in self.new2old_geneid:
+            if i in self.olo121.keys():
+                ii = self.olo121[i]
+                dct[i] = ii
+        return(dct)
+
+    def add_neo_to_GdxxxID2dmelFBgn(self):
+        """
+           add new information (my own orhtolog one2one) to GdxxxID2dmelFBgn
+        """
+        count = 0
+        for line in self.linesneo121:
+            (dmelFBgn, GdxxxID) = line.rstrip().split("\t")
+            self.GdxxxID2dmelFBgn[GdxxxID] = dmelFBgn
+            count += 1
+
     def get_geneidtable(self):
         """ get geneid, refgeneid, and relationship """
         st_geneid = set()
@@ -113,16 +171,22 @@ class FocalAnnotation:
         
         return st_geneid, st_refgeneid, dct_geneid2refgeneid, dct_refgeneid2geneid
     
-    def get_old_ortholog_121(self):
+    def get_olo121_info(self):
         """
            get old ortholog from FlyBase/OrthDB
+           return many dct
+           GdxxxID to dmelFBgn
            dxxxFBgn to dmelFBgn
         """
+        dct_GdxxxID2dmelFBgn = dict()
         dct_dxxxFBgn2dmelFBgn = dict()
         for line in self.linesolo121:
             dmelFBgn, dmelSymbol, dxxxFBgn = line.rstrip().split("\t")
+            if dxxxFBgn in self.dxxxFBgn2GdxxxID.keys():
+                GdxxxID = self.dxxxFBgn2GdxxxID[dxxxFBgn]
+                dct_GdxxxID2dmelFBgn[GdxxxID] = dmelFBgn
             dct_dxxxFBgn2dmelFBgn[dxxxFBgn] = dmelFBgn
-        return dct_dxxxFBgn2dmelFBgn
+        return(dct_GdxxxID2dmelFBgn, dct_dxxxFBgn2dmelFBgn)
 
     def get_121_id(self):
         """ get one to one (geneid to refgeneid)"""
@@ -204,7 +268,10 @@ class FocalAnnotation:
         return dct
 
     def get_tmap(self):
-        """ get connection of gene ids between gtf and v3.gtf """
+        """ 
+           get connection of gene ids between gtf and v3.gtf
+           only complete one2one relationship will be returned
+        """
         old2new_geneid = dict()
         new2old_geneid = dict()
         for line in self.tmaplines:
@@ -217,14 +284,16 @@ class FocalAnnotation:
                 if not qry_gene_id in new2old_geneid.keys():
                     new2old_geneid[qry_gene_id] = set()
                 new2old_geneid[qry_gene_id].add(ref_gene_id)
-        return (old2new_geneid, new2old_geneid)
-        
-        
 
+        # make non-redundant version (only one2one were kept in the result)
+        old2new_geneid_u = remove_redundancy_in_dict(old2new_geneid)
+        new2old_geneid_u = remove_redundancy_in_dict(new2old_geneid)
+        return (old2new_geneid_u, new2old_geneid_u)
+        
         
 if __name__ == '__main__':
-    summarize_annotation_update()
+    # summarize_annotation_update()
     # summarize_gene_merge()
-
+    ann = FocalAnnotation("dyak")
 
 

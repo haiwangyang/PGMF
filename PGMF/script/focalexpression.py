@@ -14,7 +14,7 @@ class FocalExpression:
     def __init__(self, species):
         self.species = species
         
-        # v2 updated annotation
+        # v3 updated annotation
         self.filename = species + ".expression.nrc.tab"
         self.lines = get_lines("../data/expression", self.filename)
         self.expressionheader, self.geneid2expression = self.get_geneid2expression(1)
@@ -64,13 +64,13 @@ if __name__ == '__main__':
         print ("Now processing " + dxxx)
         ann = focalannotation.FocalAnnotation(dxxx)
         exp = FocalExpression(dxxx)
-        with open("../data/output/" + dxxx + ".genic.nrc.txt", 'w') as f:
+        with open("../data/expression/" + dxxx + ".genic.nrc.txt", 'w') as f:
             f.write(exp.expressionheader)
             for geneid in exp.geneid2expression.keys():
                 expression = exp.geneid2expression[geneid]
                 if geneid in ann.geneid2refgeneid121.keys():
                     refgeneid = ann.geneid2refgeneid121[geneid]
-                    #f.write(refgeneid + "\t" + "\t".join(expression) + "\n")
+                    f.write(refgeneid + "\t" + "\t".join(expression) + "\n")
 
                     findDmelOrtholog = 0
                     if refgeneid.endswith(dxxx):
@@ -94,17 +94,17 @@ if __name__ == '__main__':
 
 
     """ gene expression matrix based on old annotation """
-    for dxxx in sharedinfo.ordered_species:
-        print ("Now processing " + dxxx)
-        ann = focalannotation.FocalAnnotation(dxxx)
-        exp = FocalExpression(dxxx)
-        with open("../data/output/" + dxxx + ".genic.onrc.txt", 'w') as f:
-            f.write(exp.oldexpressionheader)
-            for geneid in exp.oldgeneid2expression.keys():
-                expression = exp.oldgeneid2expression[geneid]
-                if geneid in ann.olo121.keys():
-                    dmelgeneid = ann.olo121[geneid]
-                    f.write(dmelgeneid + "\t" + "\t".join(expression) + "\n")
+    #for dxxx in sharedinfo.ordered_species:
+    #    print ("Now processing " + dxxx)
+    #    ann = focalannotation.FocalAnnotation(dxxx)
+    #    exp = FocalExpression(dxxx)
+    #    with open("../data/output/" + dxxx + ".genic.onrc.txt", 'w') as f:
+    #        f.write(exp.oldexpressionheader)
+    #        for geneid in exp.oldgeneid2expression.keys():
+    #            expression = exp.oldgeneid2expression[geneid]
+    #            if geneid in ann.olo121.keys():
+    #                dmelgeneid = ann.olo121[geneid]
+    #                f.write(dmelgeneid + "\t" + "\t".join(expression) + "\n")
 
     
 
