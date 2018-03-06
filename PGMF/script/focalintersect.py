@@ -371,14 +371,17 @@ class FocalIntersect:
                 if name in want:
                     f.write(line)
 
-                
-
-
-if __name__ == '__main__':
+def main():
     sample = sys.argv[1] # dmel_f_wb_r1
     summarize_jaccard(sample)
     #summarize_end(sample)
 
     (species, sex, tissue, replicate) = sample.split("_")
     ins = FocalIntersect(species, sex, tissue, replicate)
-    ins.generate_jaccard0_isoseq_bed()
+    ins.generate_jaccard0_isoseq_bed()                
+
+
+if __name__ == '__main__':
+    # main()
+    fi = FocalIntersect("dgri", "f", "wb", "r1")
+

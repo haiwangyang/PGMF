@@ -98,7 +98,6 @@ class FocalAnnotation:
         self.linesolo121 = get_lines("../data/ortholog", self.filenameolo121)
         (self.GdxxxID2dmelFBgn, self.dxxxFBgn2dmelFBgn) = self.get_olo121_info()
 
-
         # these dmelFBgn lost one2one due to annotation update, and I need to use dxxxFBgn 
         self.lost1_dmelFBgn = set(self.dxxxFBgn2dmelFBgn.values()) - set(self.GdxxxID2dmelFBgn.values())
         self.lost1_dxxxFBgn = set([switch_key_value_in_dict(self.dxxxFBgn2dmelFBgn)[i] for i in self.lost1_dmelFBgn])
@@ -308,6 +307,6 @@ class FocalAnnotation:
 if __name__ == '__main__':
     # summarize_annotation_update()
     # summarize_gene_merge()
-    ann = FocalAnnotation("dyak")
+    ann = FocalAnnotation("dmel")
 
 

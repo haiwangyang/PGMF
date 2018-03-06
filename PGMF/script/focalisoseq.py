@@ -187,7 +187,7 @@ class FocalIsoseq:
             dct[isoseqid] = num_exons - 1
         return dct
 
-if __name__ == '__main__':
+def main():
     #""" printout polyA len """
     #for sample in sharedinfo.pacbio_sample:
     #    printout_polyA_summary(sample)
@@ -197,5 +197,10 @@ if __name__ == '__main__':
 
     for sample in sharedinfo.pacbio_sample:
         generate_jaccard_type_isoseqid_bed_for_sample(sample)
+
+if __name__ == '__main__':
+    # main()
+    fi = FocalIsoseq("dgri", "f", "wb", "r1")
+
 
 
