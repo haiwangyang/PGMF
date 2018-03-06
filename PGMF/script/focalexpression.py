@@ -18,6 +18,7 @@ class FocalExpression:
         self.filename = species + ".expression.nrc.tab"
         self.lines = get_lines("../data/expression", self.filename)
         self.expressionheader, self.geneid2expression = self.get_geneid2expression(1)
+        
 
         # FB2017_03 old annotation
         self.oldfilename = species + ".expression.onrc.tab"
@@ -44,76 +45,31 @@ class FocalExpression:
         return expressionheader, dct_geneid2expression
     
 
-    
-if __name__ == '__main__':
-    # """ generate network expression matrix for yijie """
-    # for dxxx in sharedinfo.ordered_species: 
-    #    ann = focalannotation.FocalAnnotation(dxxx)
-    #    exp = FocalExpression(dxxx)
-    #    with open("../data/output/" + dxxx + ".genic.nrc.txt", 'w') as f:
-    #        f.write(exp.expressionheader)
-    #        for geneid in exp.geneid2expression.keys():
-    #            expression = exp.geneid2expression[geneid]
-    #            if geneid in ann.geneid2refgeneid121.keys():
-    #                refgeneid = ann.geneid2refgeneid121[geneid]
-    #                f.write(refgeneid + "\t" + "\t".join(expression) + "\n")
-
+def main():
     """ generate network expression matrix for yijie (orthologs converted)"""
+    dmelFBgn2dmelSymbol = focalannotation.FocalAnnotation("dmel").dmelFBgn2dmelSymbol
+
     dct_ortholog_expression = dict()
     for dxxx in sharedinfo.ordered_species:
         print ("Now processing " + dxxx)
         ann = focalannotation.FocalAnnotation(dxxx)
         exp = FocalExpression(dxxx)
         with open("../data/expression/" + dxxx + ".genic.nrc.txt", 'w') as f:
-            f.write(exp.expressionheader)
-            for geneid in exp.geneid2expression.keys():
-                expression = exp.geneid2expression[geneid]
-                if geneid in ann.geneid2refgeneid121.keys():
-                    refgeneid = ann.geneid2refgeneid121[geneid]
-                    f.write(refgeneid + "\t" + "\t".join(expression) + "\n")
-
-                    findDmelOrtholog = 0
-                    if refgeneid.endswith(dxxx):
-                        dmelrefgeneid = refgeneid.replace("_" + dxxx, "")
-                        findDmelOrtholog += 1
-                    elif refgeneid in ann.olo121.keys():
-                        dmelrefgeneid = ann.olo121[refgeneid]
-                        findDmelOrtholog += 1
-
-                    if findDmelOrtholog > 0:
-                        if not dmelrefgeneid in dct_ortholog_expression.keys():
-                            dct_ortholog_expression[dmelrefgeneid] = dict()
-                        f.write(dmelrefgeneid + "\t" + "\t".join(expression) + "\n")
-                        dct_ortholog_expression[dmelrefgeneid][dxxx] = expression
-
-    #with open("../data/output/dmel.ortholog.expression.longlist", 'w') as f:
-    #    for dmelrefgeneid in dct_ortholog_expression.keys():
-    #        for dxxx in dct_ortholog_expression[dmelrefgeneid]:
-    #            f.write(dmelrefgeneid + "\t" + dxxx + "\t" + "\t".join(dct_ortholog_expression[dmelrefgeneid][dxxx]) + "\n")
+            f.write("GeneID" + "\t" + "ortholog_dmelFBgn" + "\t" + "ortholog_dmelSymbol" + exp.expressionheader)
+            for GdxxxID in exp.geneid2expression.keys():
+                expression = exp.geneid2expression[GdxxxID]
+                if GdxxxID in ann.GdxxxID2dmelFBgn.keys():
+                    dmelFBgn = ann.GdxxxID2dmelFBgn[GdxxxID]
+                    dmelSymbol = dmelFBgn2dmelSymbol[dmelFBgn]
+                    f.write(GdxxxID + "\t" + dmelFBgn + "\t" + dmelSymbol + "\t" + "\t".join(expression) + "\n")
+            for dxxxFBgn in exp.oldgeneid2expression.keys():
+                expression = exp.oldgeneid2expression[dxxxFBgn]
+                if dxxxFBgn in ann.dxxxFBgn2dmelFBgn.keys():
+                    dmelFBgn = ann.dxxxFBgn2dmelFBgn[dxxxFBgn]
+                    dmelSymbol = dmelFBgn2dmelSymbol[dmelFBgn]
+                    f.write(dxxxFBgn + "\t" + dmelFBgn + "\t" + dmelSymbol + "\t" + "\t".join(expression) + "\n")
 
 
+if __name__ == '__main__':
+    main()
 
-    """ gene expression matrix based on old annotation """
-    #for dxxx in sharedinfo.ordered_species:
-    #    print ("Now processing " + dxxx)
-    #    ann = focalannotation.FocalAnnotation(dxxx)
-    #    exp = FocalExpression(dxxx)
-    #    with open("../data/output/" + dxxx + ".genic.onrc.txt", 'w') as f:
-    #        f.write(exp.oldexpressionheader)
-    #        for geneid in exp.oldgeneid2expression.keys():
-    #            expression = exp.oldgeneid2expression[geneid]
-    #            if geneid in ann.olo121.keys():
-    #                dmelgeneid = ann.olo121[geneid]
-    #                f.write(dmelgeneid + "\t" + "\t".join(expression) + "\n")
-
-    
-
-
-
-    """ test """
-    #for geneid in ann.geneid2refgeneid121.keys():
-    #    if ann.geneid2refgeneid121[geneid] == "FBgn0000504_dyak":
-    #        print(geneid, ann.geneid2refgeneid121[geneid])
-
-    #MFBST.8049 FBgn0000504_dyak
-    #MFBST.8207 FBgn0000504_dyak

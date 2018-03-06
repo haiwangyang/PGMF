@@ -72,14 +72,18 @@ When you click the **Knit** button a document will be generated that includes bo
 
 ```{r get big expression matrix}
   # dmel
-  bigmatrix = read.table(paste0(base_path, "data/output/dmel.genic.nrc.txt"),sep="\t",header=1)
+  bigmatrix = read.table(paste0(base_path, "data/expression/dmel.genic.nrc.txt"),sep="\t")
   bigmatrix = reorder_columns_for_matrix(bigmatrix, sexedtissue8_in_final_order)
+  row.names(bigmatrix) = as.character(sapply(row.names(bigmatrix), first))
+  
   
   # dyak to dvir
   for (dxxx in species_in_final_order[2:8]){
     print(dxxx)
-    d = read.table(paste0(base_path, "data/output/", dxxx , ".genic.nrc.txt"),sep="\t",header=1)
+    d = read.table(paste0(base_path, "data/expression/", dxxx , ".genic.nrc.txt"),sep="\t",header=1)
     d = reorder_columns_for_matrix(d, sexedtissue7_in_final_order)
+    row.names(d) = as.character(sapply(row.names(d), first))
+    
     bigmatrix = merge(bigmatrix, d, by="row.names")
     row.names(bigmatrix) = bigmatrix[,"Row.names"]
     bigmatrix = bigmatrix[,-1]
@@ -88,8 +92,10 @@ When you click the **Knit** button a document will be generated that includes bo
   # dgri
   for (dxxx in species_in_final_order[9]){
     print(dxxx)
-    d = read.table(paste0(base_path, "data/output/", dxxx , ".genic.nrc.txt"),sep="\t",header=1)
+    d = read.table(paste0(base_path, "data/expression/", dxxx , ".genic.nrc.txt"),sep="\t",header=1)
     d = reorder_columns_for_matrix(d, sexedtissue8_in_final_order)
+    row.names(d) = as.character(sapply(row.names(d), first))
+    
     bigmatrix = merge(bigmatrix, d, by="row.names")
     row.names(bigmatrix) = bigmatrix[,"Row.names"]
     bigmatrix = bigmatrix[,-1]
@@ -101,83 +107,114 @@ When you click the **Knit** button a document will be generated that includes bo
 
 
 
-```{r get big expression matrix old annotation}
-  # dmel
-  obigmatrix = read.table(paste0(base_path, "data/output/dmel.genic.onrc.txt"),sep="\t",header=1)
-  obigmatrix = reorder_columns_for_matrix(obigmatrix, sexedtissue8_in_final_order)
+
+```{r DESeq2 sex-biased expression of orthologs}
+compare_male_female_of_the_same_tissue = function(countData_this, colData_this, species, tissue, alpha=0.05) {
+  # obtain part data just about this tissue in dgriG1 
+  # part_countData = countData_this[,names(countData_this)[grepl(paste0("_",tissue,"_"),names(countData_this)) & !grepl("dgriG1_m_re_R2a", names(countData_this)) ]]
   
-  # dyak to dvir
-  for (dxxx in species_in_final_order[2:8]){
-    print(dxxx)
-    d = read.table(paste0(base_path, "data/output/", dxxx , ".genic.onrc.txt"),sep="\t",header=1)
-    d = reorder_columns_for_matrix(d, sexedtissue7_in_final_order)
-    obigmatrix = merge(obigmatrix, d, by="row.names")
-    row.names(obigmatrix) = obigmatrix[,"Row.names"]
-    obigmatrix = obigmatrix[,-1]
+  part_countData = countData_this[,names(countData_this)[grepl(paste0("_",tissue,"_"),names(countData_this)) & !grepl("dyak_m_wb_R4",names(countData_this))]]
+  part_colData = colData_this[colnames(part_countData),]
+  
+  # do deseq2
+  part_dds = DESeqDataSetFromMatrix(part_countData, part_colData, design=~sex)
+  part_dds = estimateSizeFactors(part_dds)
+  part_dds = DESeq(part_dds)
+  resultsNames(part_dds)
+  part_res = results(part_dds)
+  summary(part_res,alpha=alpha)
+  
+  part_dds = estimateSizeFactors(part_dds)
+  part_normCounts = counts(part_dds, normalized=TRUE)
+  
+  part_res_sig = part_res[part_res$padj<alpha & !is.na(part_res$padj),]
+  part_res_sig_male = part_res_sig[part_res_sig$log2FoldChange>0,]
+  part_res_sig_female = part_res_sig[part_res_sig$log2FoldChange<0,]
+  FBgns_res_sig_male = rownames(part_res_sig_male)
+  FBgns_res_sig_female = rownames(part_res_sig_female)
+  
+  FBgns_all = rownames(part_res)
+  FBgns_all_minus_m = FBgns_all[! FBgns_all %in% FBgns_res_sig_male]
+  FBgns_unbiased = FBgns_all_minus_m[! FBgns_all_minus_m %in% FBgns_res_sig_female]
+  df_bias_m = data.frame("FBgn_ID"=as.character(unlist(FBgns_res_sig_male)),"bias"="male")
+  df_bias_unbias = data.frame("FBgn_ID"=FBgns_unbiased,"bias"="unbiased")
+  df_bias_f = data.frame("FBgn_ID"=as.character(unlist(FBgns_res_sig_female)),"bias"="female")
+  df_bias_total = rbind(df_bias_m,df_bias_unbias,df_bias_f)
+  df_bias_total$FBgn_ID = as.character(df_bias_total$FBgn_ID)
+  df_bias_total = df_bias_total[order(df_bias_total$FBgn_ID),]
+  
+
+    x = log2(part_normCounts+1)
+    x = merge(x, part_res, by="row.names")
+    row.names(x) = x$Row.names 
+    x = x[,-1]
+    #colnames(x) = gsub(paste0("dgriWm1041_f_", tissue, "_"), "", colnames(x))
+    #colnames(x) = gsub("a$", "_mix", colnames(x))
+    #colnames(x) = gsub("b$", "_single", colnames(x))
+    x$bias = df_bias_total$bias
+    
+
+    x$col = rgb(0,0,0,0.3)
+    x$col[x$bias == "female"] = rgb(1,0,0,0.6)
+    x$col[x$bias == "male"] = rgb(0,0,1,0.6)
+    x$MAplot_mean_R1 = (x[,1] + x[,2])/2
+    x$MAplot_log2FoldChange = x$log2FoldChange
+    
+    y = x
+    
+    pdf(paste0("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/MAplot/", paste0(capitalize(species), ".", get_tissueFull(tissue) ), ".pdf"),width=40,height=40)
+
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange > 2] = 2
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange < -2] = -2
+    plot(x$MAplot_mean_R1, x$MAplot_log2FoldChange, col=x$col, pch = 19, cex = 8, xlim=c(0,18), cex.axis=5, cex.lab=5, cex.main=5, main = paste0(capitalize(species), " ", get_tissueFull(tissue) ), xlab="mean expression (log2 normalized read count + 1)", ylab="log2 fold change of male to female")
+    text(16, 1.5, labels = dim(df_bias_m)[1], col = rgb(0,0,1), cex = 20)
+    text(16, -1.5, labels = dim(df_bias_f)[1], col = rgb(1,0,0), cex = 20)
+    # #text(x$MAplot_mean_R1, x$MAplot_log2FoldChange + 0.1, labels = x$label)
+    dev.off()
+
+  return(y)
+}
+
+
+# plot manual MAplot and save the data
+deseq_data = list()
+for (species in c("w1118", "oreR", species_in_final_order)){
+  if (species %in% c("dmel", "dgri", "w1118", "oreR")){
+    tissues = tissues_in_final_order
   }
-  
-  # dgri
-  for (dxxx in species_in_final_order[9]){
-    print(dxxx)
-    d = read.table(paste0(base_path, "data/output/", dxxx , ".genic.onrc.txt"),sep="\t",header=1)
-    d = reorder_columns_for_matrix(d, sexedtissue8_in_final_order)
-    obigmatrix = merge(obigmatrix, d, by="row.names")
-    row.names(obigmatrix) = obigmatrix[,"Row.names"]
-    obigmatrix = obigmatrix[,-1]
+  if (species %in% species_in_final_order[2:8]){s
+    tissues = tissues_in_final_order_no_ge
   }
-  
-  obigmatrix = reorder_columns_for_matrix(obigmatrix, sexedtissue8_in_final_order)
-  
+  for (tissue in tissues){
+    print(paste0(species, " ", tissue))
+    colData_species = read.table(paste0(pwd,paste0(species, ".design")), header=TRUE, sep='',row.names='sample_id')
+    countData_species = read.table(paste0(pwd,species,".genic.htseq.mat"), header=TRUE, sep='\t',row.names="FBgn")
+    countData_species = countData_species[!grepl("^ERCC",row.names(countData_species)),]
+    countData_species = countData_species[!grepl("^__",row.names(countData_species)),]
+    countData_this = countData_species
+    colData_this = colData_species
+
+    deseq_data[[paste0(species, "_", tissue)]] = compare_male_female_of_the_same_tissue(countData_this, colData_this, species,  tissue, alpha=0.05)
+  }
+}
+
+
+
 ```
 
 
-```{r make complete expressional matrix of updated annotation and old annotation}
-  oFBgnset = row.names(obigmatrix)
-  FBgnset = row.names(bigmatrix)
-  fillFBgnset = oFBgnset[!oFBgnset %in% FBgnset]
-  
-  cbigmatrix = bigmatrix
-  cbigmatrix = rbind(cbigmatrix, obigmatrix[fillFBgnset,])
-  
-  
-```
 
 ```{r heatmap plot all samples}
-  
   png(paste0(base_path, "data/output/expression.heatmap.of.orthologs.png"),width=5000,height=5000, res = 300, bg = NA)
-  pheatmap(log2(cbigmatrix+1), cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=1, legend = FALSE)
+  pheatmap(log2(bigmatrix+1), cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=1, legend = FALSE)
   # pheatmap(log2(bigmatrix+1), color=pal(100), cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=0.1, legend = FALSE, breaks=seq(-b,b,length.out=100))
   dev.off()
   
 ```
 
-```{r guess phylogeny by expression}
-  cbigmatrix_m_wb = cbigmatrix[,grepl("m_go", colnames(cbigmatrix))]
 
-  median_mat = data.frame("row.names" = row.names(cbigmatrix_m_wb))
-  for (species in species_in_final_order){
-    if (species == "dmel"){
-      A = cbigmatrix_m_wb[,grepl("oreR", colnames(cbigmatrix_m_wb))]
-      B = cbigmatrix_m_wb[,grepl("w1118", colnames(cbigmatrix_m_wb))]
-      C = as.numeric(apply(cbind(A,B), 1, median))
-      
-      AB = cbigmatrix_m_wb[,grepl("w1118", colnames(cbigmatrix_m_wb))]
-      C = as.numeric(apply(cbind(A,B), 1, median))
-    }
-    else {
-      AB = cbigmatrix_m_wb[,grepl(species, colnames(cbigmatrix_m_wb))]
-      C = as.numeric(apply(AB, 1, median))
-    }
-    median_mat[,species] = C
-  }
-  
-   hc<-hclust(dist(log2(t(median_mat)+1)))
-   plot(hc)
-   
-```
 
 ```{r heatmap plot female/male}
-  
   samples = colnames(cbigmatrix)
   rsmallmatrix = data.frame("row.names" = row.names(cbigmatrix))
   
@@ -237,3 +274,30 @@ plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r guess phylogeny by expression}
+  cbigmatrix_m_wb = cbigmatrix[,grepl("m_go", colnames(cbigmatrix))]
+
+  median_mat = data.frame("row.names" = row.names(cbigmatrix_m_wb))
+  for (species in species_in_final_order){
+    if (species == "dmel"){
+      A = cbigmatrix_m_wb[,grepl("oreR", colnames(cbigmatrix_m_wb))]
+      B = cbigmatrix_m_wb[,grepl("w1118", colnames(cbigmatrix_m_wb))]
+      C = as.numeric(apply(cbind(A,B), 1, median))
+      
+      AB = cbigmatrix_m_wb[,grepl("w1118", colnames(cbigmatrix_m_wb))]
+      C = as.numeric(apply(cbind(A,B), 1, median))
+    }
+    else {
+      AB = cbigmatrix_m_wb[,grepl(species, colnames(cbigmatrix_m_wb))]
+      C = as.numeric(apply(AB, 1, median))
+    }
+    median_mat[,species] = C
+  }
+  
+   hc<-hclust(dist(log2(t(median_mat)+1)))
+   plot(hc)
+   
+```
+

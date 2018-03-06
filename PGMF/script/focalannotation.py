@@ -69,6 +69,9 @@ def remove_redundancy_in_dict(dct):
 def switch_key_value_in_dict(dct):
     return({y:x for x,y in dct.items()})
 
+    
+
+
 class FocalAnnotation:
     """FocalAnnotation object"""
     def __init__(self, species):
@@ -105,8 +108,19 @@ class FocalAnnotation:
         self.linesneo121 = get_lines("../data/ortholog", self.filenameneo121)
         self.add_neo_to_GdxxxID2dmelFBgn()
 
+        if species == "dmel":
+            self.dmelFBgn2dmelSymbol = self.get_dmelFBgn2dmelSymbol()
+    
+    def get_dmelFBgn2dmelSymbol(self):
+        """ dmelFBgn 2 dmelSymbol """
+        dct = dict()
+        for line in self.oldlines:
+            (scaffold, tag, feature, start, end, scoare, strand, dot, others) = line.rstrip().split("\t")
+            this_geneid = get_id(others, 'gene_id')
+            this_symbol = get_id(others, 'gene_symbol')
+            dct[this_geneid] = this_symbol
+        return(dct)
 
-        
     def get_geneid_from_annotation(self, ver="new"):
         """ get all geneid as set() """
         lines = self.lines
