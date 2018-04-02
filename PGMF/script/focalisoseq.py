@@ -116,6 +116,23 @@ def generate_jaccard_type_isoseqid_bed_for_sample(sample):
             f.write(fi.isoseqid2bambedline[isoseqid])
 
 
+def print_unique_fasta_number():
+    """ calculate unique fasta, and remove redundancy """
+    st = set()
+    dgri_samples = ["dgri_f_wb_r1", "dgri_m_wb_r1", "dgri_f_wb_r2", "dgri_m_wb_r2"]
+    dmel_samples =  ["dmel_f_go_r1", "dmel_m_go_r1", "dmel_f_wb_r1", "dmel_m_wb_r1"]
+    samples = {"dgri":dgri_samples, "dmel":dmel_samples}
+    for dxxx in ['dmel', 'dgri']:
+        st = set()
+        for sample in samples[dxxx]:
+            fasta = Fasta("../data/pacbio/" +  sample + ".fasta")
+            for name in fasta.keys():
+                seq = fasta[name]
+                st.add(seq)
+        print(len(st))
+
+
+
 class FocalIsoseq:
     """FocalIsoseq object"""
     def __init__(self, species, sex, tissue, replicate):
@@ -200,7 +217,7 @@ def main():
 
 if __name__ == '__main__':
     # main()
-    fi = FocalIsoseq("dgri", "f", "wb", "r1")
-
+    # fi = FocalIsoseq("dgri", "f", "wb", "r1")
+    print_unique_fasta_number()
 
 
