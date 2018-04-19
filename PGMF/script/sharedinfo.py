@@ -40,6 +40,47 @@ def combination_of_two_lists(lst1, lst2):
     """
     return [e1 + "_" + e2 for e1 in lst1 for e2 in lst2]
 
+def DxxxGID_to_YOgnID(DxxxGID):
+    """ convert DxxxGID to YOgnID """
+    return("YOgn" + DxxxGID[1:3].upper() + DxxxGID[-5:])
+
+def jaccard(exonmap1, exonmap2):
+    """ get jaccard between exon map
+        1.3 and 2.4
+        jaccard = 2/4 = 0.5
+    """
+    union_sum = 0
+    intersection_sum = 0
+
+    dct1 = dict()
+    for se in exonmap1:
+        s, e = se.split(".")
+        for i in range(int(s), int(e) + 1):
+            if not i in dct1.keys():
+                dct1[i] = 0
+            dct1[i] += 1
+
+    dct2 = dict()
+    for se in exonmap2:
+        s, e = se.split(".")
+        for i in range(int(s), int(e) + 1):
+            if not i in dct2.keys():
+                dct2[i] = 0
+            dct2[i] += 1
+
+    st = set()
+    for ii in [dct1.keys(), dct2.keys()]:
+        for i in ii:
+            st.add(i)
+
+    union_sum = len(st)
+    for i in st:
+        if i in dct1.keys() and i in dct2.keys():
+            intersection_sum += 1
+
+    j = intersection_sum / union_sum
+    return(j)
+
 """ shared species and gene information """
 
 ordered_species = ['dmel', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgri']

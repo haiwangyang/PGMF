@@ -62,6 +62,7 @@ fourth = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[4])
   colors = c(pal_reds(100)[c(1, 2, 4, 8, 16, 32, 64)],"white",pal_blues(100)[c(64, 32, 16, 8, 4, 2, 1)])
   pal <- colorRampPalette(rev(colors))
   
+  
 ```
 
 ## R Markdown
@@ -162,22 +163,25 @@ compare_male_female_of_the_same_tissue = function(countData_this, colData_this, 
     
     y = x
     
-    pdf(paste0("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/MAplot/", paste0(capitalize(species), ".", get_tissueFull(tissue) ), ".pdf"),width=40,height=40)
-
+    #pdf(paste0("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/MAplot/", paste0(capitalize(species), ".", get_tissueFull(tissue) ), ".pdf"),width=40,height=40)
+    png(paste0("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/MAplot/", paste0(capitalize(species), ".", get_tissueFull(tissue) ), ".png"),width=3000,height=3000)
     x$MAplot_log2FoldChange[x$MAplot_log2FoldChange > 2] = 2
     x$MAplot_log2FoldChange[x$MAplot_log2FoldChange < -2] = -2
-    plot(x$MAplot_mean_R1, x$MAplot_log2FoldChange, col=x$col, pch = 19, cex = 8, xlim=c(0,18), cex.axis=5, cex.lab=5, cex.main=5, main = paste0(capitalize(species), " ", get_tissueFull(tissue) ), xlab="mean expression (log2 normalized read count + 1)", ylab="log2 fold change of male to female")
+    # plot(x$MAplot_mean_R1, x$MAplot_log2FoldChange, col=x$col, pch = 19, cex = 8, xlim=c(0,18), cex.axis=5, cex.lab=5, cex.main=5, main = paste0(capitalize(species), " ", get_tissueFull(tissue) ), xlab="mean expression (log2 normalized read count + 1)", ylab="log2 fold change of male to female")
+    plot(x$MAplot_mean_R1, x$MAplot_log2FoldChange, col=x$col, pch = 19, cex = 8, xlim=c(0,18), cex.axis=5, cex.lab=5, cex.main=5, main = "paste0(capitalize(species)", " ", get_tissueFull(tissue) ), xlab="", ylab="")
     text(16, 1.5, labels = dim(df_bias_m)[1], col = rgb(0,0,1), cex = 20)
     text(16, -1.5, labels = dim(df_bias_f)[1], col = rgb(1,0,0), cex = 20)
     # #text(x$MAplot_mean_R1, x$MAplot_log2FoldChange + 0.1, labels = x$label)
     dev.off()
 
+    
+    
   return(y)
 }
 
 
-# plot manual MAplot and save the data
-deseq_data = list()
+# FlyBase-annotation DESeq2 sex-biased plot manual MAplot and save the data
+deseq_data_FB = list()
 for (species in c("w1118", "oreR", species_in_final_order)){
   if (species %in% c("dmel", "dgri", "w1118", "oreR")){
     tissues = tissues_in_final_order
@@ -187,20 +191,174 @@ for (species in c("w1118", "oreR", species_in_final_order)){
   }
   for (tissue in tissues){
     print(paste0(species, " ", tissue))
-    colData_species = read.table(paste0(pwd,paste0(species, ".design")), header=TRUE, sep='',row.names='sample_id')
-    countData_species = read.table(paste0(pwd,species,".genic.htseq.mat"), header=TRUE, sep='\t',row.names="FBgn")
+    colData_species = read.table(paste0(base_path, "data/htseq/FB2017_03/", species, ".design"), header=TRUE, sep='',row.names='sample_id')
+    countData_species = read.table(paste0(base_path, "data/htseq/FB2017_03/", species,".genic.htseq.mat"), header=TRUE, sep='\t',row.names="FBgn")
     countData_species = countData_species[!grepl("^ERCC",row.names(countData_species)),]
     countData_species = countData_species[!grepl("^__",row.names(countData_species)),]
     countData_this = countData_species
     colData_this = colData_species
 
-    deseq_data[[paste0(species, "_", tissue)]] = compare_male_female_of_the_same_tissue(countData_this, colData_this, species,  tissue, alpha=0.05)
+    deseq_data_FB[[paste0(species, "_", tissue)]] = compare_male_female_of_the_same_tissue(countData_this, colData_this, species,  tissue, alpha=0.05)
   }
 }
 
+# save(deseq_data_FB,file=paste0(base_path, "data/deseq/deseq_data_FB.RData"))
+load(paste0(base_path, "data/deseq/deseq_data_FB.RData"))
+
+
+
+# This-study-annotation DESeq2 sex-biased plot manual MAplot and save the data
+deseq_data_v3 = list()
+for (species in c("w1118", "oreR", species_in_final_order)){
+  if (species %in% c("dmel", "dgri", "w1118", "oreR")){
+    tissues = tissues_in_final_order
+  }
+  if (species %in% species_in_final_order[2:8]){s
+    tissues = tissues_in_final_order_no_ge
+  }
+  for (tissue in tissues){
+    print(paste0(species, " ", tissue))
+    colData_species = read.table(paste0(base_path, "data/htseq/FB2017_03_v3/", species, ".design"), header=TRUE, sep='',row.names='sample_id')
+    countData_species = read.table(paste0(base_path, "data/htseq/FB2017_03_v3/", species,".genic.htseq.mat"), header=TRUE, sep='\t',row.names="FBgn")
+    countData_species = countData_species[!grepl("^ERCC",row.names(countData_species)),]
+    countData_species = countData_species[!grepl("^__",row.names(countData_species)),]
+    countData_this = countData_species
+    colData_this = colData_species
+
+    deseq_data_v3[[paste0(species, "_", tissue)]] = compare_male_female_of_the_same_tissue(countData_this, colData_this, species,  tissue, alpha=0.05)
+  }
+}
+
+# save(deseq_data_v3,file=paste0(base_path, "data/deseq/deseq_data_v3.RData"))
+load(paste0(base_path, "data/deseq/deseq_data_v3.RData"))
+
+
+df = data.frame()
+for (species in c("w1118", "oreR", species_in_final_order[2:9])){
+  if (species %in% c("dmel", "dgri", "w1118", "oreR")){
+    tissues = tissues_in_final_order
+  }
+  if (species %in% species_in_final_order[2:8]){s
+    tissues = tissues_in_final_order_no_ge
+  }
+  for (tissue in tissues){
+    tb0 = table(deseq_data_v3[[paste0(species, "_", tissue)]]$bias)
+    df0 = as.data.frame(tb0)
+    colnames(df0) = c("sex-bias", "num")
+    df0$species = species
+    df0$tissue = get_tissueFull(tissue)
+    df = rbind(df, df0)
+  }
+}
+
+write.table(df, "/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/sb/sb.summary.txt", sep="\t", quote = FALSE)
+
+```
+
+
+```{r expression of orthologs shared by species}
+# get 1:1 ortholog table
+orthTab = NULL
+
+d = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/expression/dmel.genic.nrc.txt"), sep="\t", header=TRUE, quote="")
+orthTab = data.frame(row.names = d[,"ortholog_dmelFBgn"], GeneID = d[, c("ortholog_dmelSymbol", "GeneID")])
+colnames(orthTab) = c("symbol","dmel")
+  
+for (species in species_in_final_order[2:9]){
+  d = read.table(paste0("/Users/yangh13/PGMF/PGMF/data/expression/", species, ".genic.nrc.txt"), sep="\t", header=TRUE, quote="")
+  dd = data.frame(row.names = d[,"ortholog_dmelFBgn"], GeneID = d[, "GeneID"])
+  colnames(dd) = species
+  
+  orthTab = merge(orthTab, dd, by="row.names")
+  row.names(orthTab) = orthTab[,"Row.names"]
+  orthTab = orthTab[,-1]
+}
+
+write.table(orthTab, "/Users/yangh13/PGMF/PGMF/data/ortholog/orth_8490.txt", quote=FALSE, sep="\t")
+
+
+# for each tissue, get sigSexBiased each species
+sbmatrix = data.frame(row.names = row.names(orthTab), symbol = orthTab$symbol)
+for (tissue in tissues_in_final_order){
+  print(tissue)
+  
+  manyspecies = species_in_final_order
+  if (tissue == "ge"){
+    manyspecies = c("dmel", "dgri")
+  }
+
+  for (species in manyspecies){
+    v3 = deseq_data_v3[[paste0(species, "_", tissue)]]
+    FB = deseq_data_FB[[paste0(species, "_", tissue)]]
+    BO = rbind(v3, FB)
+    
+    orthTab2 = data.frame(row.names = orthTab[,species], dmelFBgn = row.names(orthTab), dmelSymbol = orthTab[,'symbol'])
+
+    BO8 = merge(orthTab2, BO, by="row.names")
+    
+    BO8 = BO8[order(BO8$dmelFBgn),]
+    
+    sbmatrix[,paste0(tissue, "_", species)] = BO8[,"log2FoldChange"]
+  }
+}
+
+# modified version (if NA logFC == 0, logFC max +-4)
+sbmatrix2 = sbmatrix
+row.names(sbmatrix2) = sbmatrix2$symbol
+sbmatrix2 = sbmatrix2[,-1]
+sbmatrix2[is.na(sbmatrix2)] = 0
+# flip female and male
+sbmatrix2 = -sbmatrix2
+
+```
+
+
+
+```{r }
+plotWSS = function(mydata){
+  wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
+  for (i in 2:50) {
+    wss[i] <- sum(kmeans(mydata,centers=i)$withinss)
+  }   
+  plot(1:50, wss, type="b", xlab="Number of Clusters",ylab="Within groups sum of squares")
+}
+
+plotWSS(sbmatrix2)
+
+calKmeans = function(x, k){
+  set.seed(1)
+  x = sbmatrix2
+  k = 15
+  kmeansout<-kmeans(x, k)
+  kmeanscl<-as.data.frame(kmeansout$cl)
+  colnames(kmeanscl)<-c("cluster")
+  m<-as.data.frame(x)
+  m$cluster<-kmeanscl$cluster
+  m$cluster<-as.factor(m$cluster)
+  m$cluster<-as.integer(as.character(m$cluster))
+  m<-m[order(m$cluster), ]
+  table(m$cluster)
+  
+  write.table(m,paste0(base_path,"data/sexbias/heatmap.sb", k, ".txt"),sep="\t",quote=F)
+  
+  b = 2
+  mm = m[,-ncol(m)]
+  mm[mm > b] = b
+  mm[mm < -b] = -b
+  
+  # mm$cluster = b * mm$cluster / k
+  
+
+  
+  png(paste0(base_path,"data/sexbias/heatmap.sb", k, ".png"), width=5000, height=5000, res = 300)
+pheatmap(mm, color=pal(100), cluster_rows=FALSE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=10, legend = TRUE, breaks=seq(-b,b,length.out=100))
+  dev.off()
+  
 
 
 ```
+
+
 
 
 
