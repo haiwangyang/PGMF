@@ -34,6 +34,30 @@ def get_lines(folder, filename):
         lines = f.readlines()
         return lines
 
+def get_elements(filepath):
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+        elements = list()
+        for line in lines:
+             elements.append(line.rstrip())
+        return(elements)
+
+
+def get_A2B(filepath):
+    """
+       input a text table sep by "\t"
+       return a dict with
+       col1 key
+       col2 value
+    """
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+        dct = dict()
+        for line in lines:
+             elements = line.rstrip().split("\t")
+             dct[elements[0]] = elements[1]
+        return(dct)
+
 def combination_of_two_lists(lst1, lst2):
     """
         ["f", "m"] and ["wb", "go", "re"] => ["f_wb", "f_go", "f_re", "m_wb", "m_go", "m_re"]
@@ -81,9 +105,25 @@ def jaccard(exonmap1, exonmap2):
     j = intersection_sum / union_sum
     return(j)
 
-""" shared species and gene information """
+def get_GSM():
+    """ get sample to GSM and sampleInGEO """
+    dct = dict()
+    for line in get_lines("../data/GSM", "GSE.txt"):
+        GSM, sampleInGEO, sample = line.rstrip().split("\t")
+        if not sample in dct.keys():
+            dct[sample] = []
+        dct[sample].append([GSM, sampleInGEO])
+    return(dct)
 
+""" shared species and gene information """
+#typical_strains = ['w1118', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgriG1']
+typical_strains = ['dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgriG1']
 ordered_species = ['dmel', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgri']
+species2dxxx = get_A2B("../data/species/species2dxxx.txt")
+
+samples = get_elements("../data/sample/sample.list")
+sample2GSM = get_GSM()
+
 ordered_tissue8 = ['wb', 'go', 're', 'ge', 'tx', 'dg', 'hd', 'ac']
 ordered_tissue7 = ['wb', 'go', 're', 'tx', 'dg', 'hd', 'ac']
 ordered_sex = ['f', 'm']
