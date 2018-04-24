@@ -1,9 +1,9 @@
 # PGMF
-Predict Gene Model Frame
+Predicted Gene Model (Fly)
 
-## This package include my tools to explore 
-(1) RNA-seq data
-(2) PacBio Iso-seq data
-(3) Single cell sequencing (10xgenomics) data
+## This package include some tools that I used to explore Fly
+* RNA-seq data<br>
+* PacBio Iso-seq data<br>
+
 
 
