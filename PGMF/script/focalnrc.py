@@ -1,66 +1,69 @@
 #!/usr/bin/env python
 
 """
-Purpose: convert htseq matrix for GEO
+Purpose: convert DESeq2 normalized read count matrix for Supplementary Data
 """
 from __future__ import print_function, division
-from sharedinfo import get_lines, DxxxGID_to_YOgnID, jaccard, typical_strains, species2dxxx, sample2GSM, samples
+from sharedinfo import get_lines, DxxxGID_to_YOgnID, jaccard, typical_strains, species2dxxx, sample2GSM, samples, ordered_species
 from focalannotation import get_id
 import os
+import pandas
 
-class Htseq:
-    """ Htseq object """
-    def __init__(self, sample):
-        self.sample = sample
-        self.species, self.sex, self.tissue, self.replicate = self.sample.split("_")
+
+def convert_with_dict(lst, dct):
+    """ convert lst to another lst
+        with dct table if possible """
+    lst2 = []
+    for i in lst:
+        try:
+            ii = dct[i]
+        except:
+            ii = "-"
+        else:
+            pass
+        lst2.append(ii)
+    return(lst2)
+                
+
+class Nrc:
+    """ Nrc object """
+    def __init__(self, species):        
+        self.species = species
         self.v3exonmap = self.get_exonmap("v3")
         self.fbexonmap = self.get_exonmap("fb")
-        self.v3htseqlines = get_lines("../data/htseq/FB2017_03_v3/", sample + ".htseq_reverse_HiSAT2.txt")
-        self.fbhtseqlines = get_lines("../data/htseq/FB2017_03/", sample + ".htseq_reverse_HiSAT2.txt")
-        self.fbhtseq = self.get_fbhtseq()
+        self.v3_nrc_table = pandas.read_table("../data/nrc/FB2017_03_v3/" + species + ".expression.nrc.txt")
+        self.fb_nrc_table = pandas.read_table("../data/nrc/FB2017_03/" + species + ".expression.nrc.txt")
+        #self.fbhtseq = self.get_fbhtseq()
         self.DxxxGID2YOgnID = self.get_DxxxGID2YOgnID()
         self.DxxxGID2FBgnID = self.get_DxxxGID2FBgnID()
         self.DxxxGID2jaccard = self.get_DxxxGID2jaccard()
-        self.update_v3htseq_lines()
+        self.update_v3_nrc_table()
 
-
-    def update_v3htseq_lines(self):
+    def update_v3_nrc_table(self):
         """ update htseq txt """
-        GSMinfos = sample2GSM[self.sample]
-        for GSMinfo in GSMinfos:
-            GSM, sampleInGEO = GSMinfo
-            with open("../data/htseq/" + GSM + "_" + sampleInGEO + ".htseq_reverse.txt", "w") as f:
-                for line in self.v3htseqlines:
-                    if not line.startswith("__"):
-                        DxxxGID, rc = line.rstrip().split("\t")
-                        YOgnID = self.DxxxGID2YOgnID[DxxxGID]
-                        try:
-                            FBgnID = self.DxxxGID2FBgnID[DxxxGID]
-                        except:
-                            FBgnID = "-"
-                            j = "-"
-                            fbexp = "-"
-                        else:
-                            FBgnID = self.DxxxGID2FBgnID[DxxxGID]
-                            j = self.DxxxGID2jaccard[DxxxGID]
-                            fbexp = self.fbhtseq[FBgnID]
-                    f.write("\t".join([YOgnID, str(j), FBgnID, rc]) + "\n")
+        DxxxGIDs = list(self.v3_nrc_table.index)
+        YOgnIDs = convert_with_dict(DxxxGIDs, self.DxxxGID2YOgnID)
+        FBgnIDs = convert_with_dict(DxxxGIDs, self.DxxxGID2FBgnID)
+        js = convert_with_dict(DxxxGIDs, self.DxxxGID2jaccard)
+        self.v3_nrc_table.insert(loc = 0, column = "FBgnID", value = FBgnIDs)
+        self.v3_nrc_table.insert(loc = 0, column = "jaccard", value = js)
+        self.v3_nrc_table.insert(loc = 0, column = "YOgnID", value = YOgnIDs)
+        self.v3_nrc_table.index = self.v3_nrc_table.YOgnID
+        self.v3_nrc_table = self.v3_nrc_table.drop(["YOgnID"], axis=1)
 
-    def get_fbhtseq(self):
-        """ get fb htseq in dct """
-        dct = dict()
-        for line in self.fbhtseqlines:
-            if not line.startswith("__"):
-                FBgnID, rc = line.rstrip().split("\t")
-                dct[FBgnID] = rc
-        return(dct)
+    def print_out_updated_v3_nrc_table(self):
+        if self.species == "dgri":
+            self.v3_nrc_table[list(self.v3_nrc_table.columns.values)[0:66]].to_csv("../data/nrc/" + self.species + ".nrc.txt", sep="\t")
+        else:        
+            self.v3_nrc_table.to_csv("../data/nrc/" + self.species + ".nrc.txt", sep="\t")
 
     def get_DxxxGID2YOgnID(self):
         nlines = list()
         DxxxGID2YOgnID = dict()
-        for line in self.v3htseqlines:
+        for line in list(self.v3_nrc_table.index):
             if not line.startswith("__"):
-                DxxxGID, rc = line.rstrip().split("\t")
+                temp = line.rstrip().split("\t")
+                DxxxGID = temp[0]
                 DxxxGID2YOgnID[DxxxGID] = DxxxGID_to_YOgnID(DxxxGID)
         return(DxxxGID2YOgnID)
 
@@ -116,8 +119,6 @@ class Htseq:
                     DxxxGID2jaccard[DxxxGID] = j 
         return(DxxxGID2jaccard)
 
-    
-
     def generate_jaccard_file(self):
         species = self.species
         if self.species == "w1118" or self.species == "oreR":
@@ -131,21 +132,21 @@ class Htseq:
                 f.write("\t".join([DxxxGID, FBgnID, str(j)]) + "\n")
 
 def generate_jaccard_file_all_species():
-    # for s in typical_strains:
-    for s in ["dyak",]:
+    for s in typical_strains:
         print(s)
         h = Htseq(s + "_m_wb_R1")
         h.generate_jaccard_file()
 
-def generate_GEO_htseq_txt_for_all_samples():
-    for sample in samples:
-        print(sample)
-        h = Htseq(sample)
+def generate_new_nrc_for_all_species():
+    for species in ordered_species:
+        print("generating new nrc table for " + species)
+        n = Nrc(species)
+        n.print_out_updated_v3_nrc_table()
 
 def main():
-    generate_jaccard_file_all_species()
-    # h = Htseq("w1118_m_wb_R1")
-    # generate_GEO_htseq_txt_for_all_samples()
-
+    # generate_new_nrc_for_all_species()
+    n = Nrc("dgri")
+    
 if __name__ == '__main__':
-    main()    
+    # main()
+    n = Nrc("dgri")
