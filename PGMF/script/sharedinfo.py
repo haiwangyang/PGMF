@@ -68,6 +68,10 @@ def DxxxGID_to_YOgnID(DxxxGID):
     """ convert DxxxGID to YOgnID """
     return("YOgn" + DxxxGID[1:3].upper() + DxxxGID[-5:])
 
+def DxxxTID_to_YOtrID(DxxxTID):
+    """ convert DxxxTID to YOtrID """
+    return("YOtr" + DxxxTID[1:3].upper() + DxxxTID[-6:])
+
 def jaccard(exonmap1, exonmap2):
     """ get jaccard between exon map
         1.3 and 2.4
