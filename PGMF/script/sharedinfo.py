@@ -58,6 +58,22 @@ def get_A2B(filepath):
              dct[elements[0]] = elements[1]
         return(dct)
 
+def get_M2N(filepath, m, n):
+    """
+       input a text table sep by "\t"
+       return a dict with
+       m: key col index
+       n: value col index
+    """
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+        dct = dict()
+        for line in lines:
+             elements = line.rstrip().split("\t")
+             dct[elements[m]] = elements[n]
+        return(dct)
+
+
 def combination_of_two_lists(lst1, lst2):
     """
         ["f", "m"] and ["wb", "go", "re"] => ["f_wb", "f_go", "f_re", "m_wb", "m_go", "m_re"]
@@ -120,8 +136,8 @@ def get_GSM():
     return(dct)
 
 """ shared species and gene information """
-#typical_strains = ['w1118', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgriG1']
-typical_strains = ['dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgriG1']
+typical_strains = ['w1118', 'dyak']
+# typical_strains = ['w1118', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgriG1']
 ordered_species = ['dmel', 'dyak', 'dana', 'dpse', 'dper', 'dwil', 'dmoj', 'dvir', 'dgri']
 species2dxxx = get_A2B("../data/species/species2dxxx.txt")
 
