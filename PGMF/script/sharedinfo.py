@@ -11,8 +11,6 @@ import downloadbig
 from pathlib import Path
 
 
-
-
 """ shared functions """ 
 
 def exist_file(folder, filename):
@@ -151,6 +149,8 @@ ordered_sex = ['f', 'm']
 ordered_sexedtissue7 = combination_of_two_lists(ordered_sex, ordered_tissue7)
 
 ordered_sexedtissue8 = combination_of_two_lists(ordered_sex, ordered_tissue8)
+
+# dmelFBgnID2dmelSymbol = FocalAnnotation("dmel").dmelFBgn2dmelSymbol
 
 
 tra_refgeneid = "FBgn0003741"
