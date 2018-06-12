@@ -59,6 +59,7 @@ def join_all_ortholog_tables():
                 dct[dmelFBgnID] = dict()
             dct[dmelFBgnID][species] = [YOgnID, FBgnID]
 
+    print("total: " + str(len(dct.keys())))
     count = 0
     with open("../data/ortholog/ortholog.txt", "w") as f:
         f.write("\t".join(["FBgnID_Dmel", "GeneSymbol_Dmel"]) + "\t" + "\t".join(ordered_species) + "\n")
@@ -82,4 +83,4 @@ def join_all_ortholog_tables():
             
 if __name__ == '__main__':
     # get_all_ortholog_tables()
-    # join_all_ortholog_tables()
+    join_all_ortholog_tables()

@@ -8,7 +8,8 @@ output: html_document
 ```{r setup, include=FALSE}
 library("pheatmap")
 library("RColorBrewer")
-
+library("ggplot2")
+library(Hmisc)
 
 base_path = "/Users/yangh13/PGMF/PGMF/"
 knitr::opts_chunk$set(echo = TRUE)
@@ -16,13 +17,17 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r shared variables and funtions}
 tissue8_in_final_order = c( "wb", "go", "re", "ge", "tx", "dg", "hd", "ac")
+tissues_in_final_order_no_ge = c( "wb", "go", "re", "tx", "dg", "hd", "ac")
 tissue7_in_final_order = c( "wb", "go", "re", "tx", "dg", "hd", "ac")
 sexedtissue7_in_final_order = c("f_wb", "m_wb", "f_go", "m_go", "f_re", "m_re", "f_tx", "m_tx", "f_dg", "m_dg", "f_hd", "m_hd", "f_ac", "m_ac")
 sexedtissue8_in_final_order = c("f_wb", "m_wb", "f_go", "m_go", "f_re", "m_re", "f_ge", "m_ge", "f_tx", "m_tx", "f_dg", "m_dg", "f_hd", "m_hd", "f_ac", "m_ac")
 
 strains_in_final_order = c("w1118", "oreR", "dyak", "dana", "dpse", "dper", "dwil", "dmoj", "dvir", "dgri")
 species_in_final_order = c("dmel", "dyak", "dana", "dpse", "dper", "dwil", "dmoj", "dvir", "dgri")
-get_tissueFull = function(tissue) {gsub("wb", "whole organism", gsub("ac", "abdomen", gsub("hd", "head", gsub("dg", "digestive", gsub("tx", "thorax", gsub("ge", "terminalia",gsub("re", "repTract", gsub("go","gonad", tissue))))))))}
+get_tissueFull = function(tissue) {gsub("wb", "whole organism", gsub("ac", "abdomen", gsub("hd", "head", gsub("dg", "viscera", gsub("tx", "thorax", gsub("ge", "terminalia",gsub("re", "reproductive tract", gsub("go","gonad", tissue))))))))}
+
+
+
 
 tissue_species_ordered = c()
 for (tissue in tissue8_in_final_order){
@@ -63,6 +68,64 @@ fourth = function(str) {v = strsplit(as.character(str), "\\_")[[1]]; paste(v[4])
   pal <- colorRampPalette(rev(colors))
   
   
+plotWSS = function(mydata){
+  wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
+  for (i in 2:50) {
+    wss[i] <- sum(kmeans(mydata,centers=i)$withinss)
+  }   
+  plot(1:50, wss, type="b", xlab="Number of Clusters",ylab="Within groups sum of squares")
+}
+
+if_ct = function(x){
+  if ("m" %in% x){
+    if ("f" %in% x){
+      return("c")
+    }
+  }
+  if ("m" %in% x){
+    if (!"f" %in% x){
+      return("m")
+    }
+  }
+  if ("f" %in% x){
+    if (!"m" %in% x){
+      return("f")
+    }
+  }
+  if (!"m" %in% x){
+    if (!"f" %in% x){
+      return("u")
+    }
+  }
+}
+
+if_ct_num = function(x){
+  if ("m" %in% x){
+    if ("f" %in% x){
+      return(2)
+    }
+  }
+  if ("m" %in% x){
+    if (!"f" %in% x){
+      return(1)
+    }
+  }
+  if ("f" %in% x){
+    if (!"m" %in% x){
+      return(-1)
+    }
+  }
+  if (!"m" %in% x){
+    if (!"f" %in% x){
+      return(0)
+    }
+  }
+}
+
+
+firstLetter = function(x){substr(x, 1,1)}
+
+  
 ```
 
 ## R Markdown
@@ -71,20 +134,23 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
-```{r get big expression matrix}
+```{r get big expression expression matrix}
   # dmel
-  bigmatrix = read.table(paste0(base_path, "data/expression/dmel.genic.nrc.txt"),sep="\t")
+  bigmatrix = read.table(paste0(base_path, "data/expression/dmel.genic.nrc.txt"),sep="\t",header=1, quote="")
+  row.names(bigmatrix) = bigmatrix$ortholog_dmelFBgn
   bigmatrix = reorder_columns_for_matrix(bigmatrix, sexedtissue8_in_final_order)
-  row.names(bigmatrix) = as.character(sapply(row.names(bigmatrix), first))
+  
+  #row.names(bigmatrix) = as.character(sapply(row.names(bigmatrix), first))
   
   
   # dyak to dvir
   for (dxxx in species_in_final_order[2:8]){
     print(dxxx)
-    d = read.table(paste0(base_path, "data/expression/", dxxx , ".genic.nrc.txt"),sep="\t",header=1)
+    d = read.table(paste0(base_path, "data/expression/", dxxx , ".genic.nrc.txt"),sep="\t",header=1,quote="")
+    row.names(d) = d$ortholog_dmelFBgn
     d = reorder_columns_for_matrix(d, sexedtissue7_in_final_order)
-    row.names(d) = as.character(sapply(row.names(d), first))
-    
+    #row.names(d) = as.character(sapply(row.names(d), first))
+    d = d[,!grepl("dyak_m_wb_R4", colnames(d))]
     bigmatrix = merge(bigmatrix, d, by="row.names")
     row.names(bigmatrix) = bigmatrix[,"Row.names"]
     bigmatrix = bigmatrix[,-1]
@@ -93,9 +159,10 @@ When you click the **Knit** button a document will be generated that includes bo
   # dgri
   for (dxxx in species_in_final_order[9]){
     print(dxxx)
-    d = read.table(paste0(base_path, "data/expression/", dxxx , ".genic.nrc.txt"),sep="\t",header=1)
+    d = read.table(paste0(base_path, "data/expression/", dxxx , ".genic.nrc.txt"),sep="\t",header=1,quote="")
+    row.names(d) = d$ortholog_dmelFBgn
     d = reorder_columns_for_matrix(d, sexedtissue8_in_final_order)
-    row.names(d) = as.character(sapply(row.names(d), first))
+    #row.names(d) = as.character(sapply(row.names(d), first))
     
     bigmatrix = merge(bigmatrix, d, by="row.names")
     row.names(bigmatrix) = bigmatrix[,"Row.names"]
@@ -104,6 +171,7 @@ When you click the **Knit** button a document will be generated that includes bo
   
   bigmatrix = reorder_columns_for_matrix(bigmatrix, sexedtissue8_in_final_order)
   
+  write.table(bigmatrix, "/Volumes/LCDB_DGS-1/Projects/Tissue_and_sex_of_Drosophila_species/Paper1/sexbias/big_matrix_nrc.txt", sep="\t", quote=FALSE, row.names=TRUE)
 ```
 
 
@@ -174,8 +242,6 @@ compare_male_female_of_the_same_tissue = function(countData_this, colData_this, 
     # #text(x$MAplot_mean_R1, x$MAplot_log2FoldChange + 0.1, labels = x$label)
     dev.off()
 
-    
-    
   return(y)
 }
 
@@ -231,8 +297,59 @@ for (species in c("w1118", "oreR", species_in_final_order)){
 
 # save(deseq_data_v3,file=paste0(base_path, "data/deseq/deseq_data_v3.RData"))
 load(paste0(base_path, "data/deseq/deseq_data_v3.RData"))
+```
 
 
+
+
+
+
+
+```{r MAplot female vs male each tissue}
+species = "w1118"
+for (tissue in tissues_in_final_order){
+    tb0 = table(deseq_data_v3[[paste0(species, "_", tissue)]]$bias)
+    df0 = as.data.frame(tb0)
+    colnames(df0) = c("sexbias", "num")
+    df0$species = species
+    df0$tissue = get_tissueFull(tissue)
+    x = deseq_data_v3[[paste0(species, "_", tissue)]]
+    
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange > 2] = 2
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange < -2] = -2
+    
+    png(paste0("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/MAplot/w1118.", tissue,".png"),width=2000,height=2000,res=600)
+    par(mar=c(1,1,1,1))
+    plot(x$MAplot_mean_R1, x$MAplot_log2FoldChange, col=x$col, pch = 19, xlim=c(0,18), cex.axis=0.01, xlab="", ylab="")
+    dev.off()
+    cat(get_tissueFull(tissue),"\t", table(x$bias),"\n")
+}
+
+
+png(paste0("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/MAplot/w1118.png"),width=6000,height=3000)
+par(mfrow=c(2,4))
+species = "w1118"
+for (tissue in tissues_in_final_order){
+    tb0 = table(deseq_data_v3[[paste0(species, "_", tissue)]]$bias)
+    df0 = as.data.frame(tb0)
+    colnames(df0) = c("sexbias", "num")
+    df0$species = species
+    df0$tissue = get_tissueFull(tissue)
+    x = deseq_data_v3[[paste0(species, "_", tissue)]]
+    
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange > 2] = 2
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange < -2] = -2
+    
+    plot(x$MAplot_mean_R1, x$MAplot_log2FoldChange, col=x$col, pch = 19, cex = 10, xlim=c(0,18), cex.axis=10, cex.lab=10, cex.main=5, main = get_tissueFull(tissue), xlab="", ylab="", cex.main = 20)
+    text(16, 1.5, labels = as.numeric(table(x$bias)["male"]), col = rgb(0,0,1), cex = 20)
+    text(16, -1.5, labels = as.numeric(table(x$bias)["female"]), col = rgb(1,0,0), cex = 20)
+}
+dev.off()
+```
+
+
+
+```{r barplot MAplot summary for non-dmel}
 df = data.frame()
 for (species in c("w1118", "oreR", species_in_final_order[2:9])){
   if (species %in% c("dmel", "dgri", "w1118", "oreR")){
@@ -243,20 +360,343 @@ for (species in c("w1118", "oreR", species_in_final_order[2:9])){
   }
   for (tissue in tissues){
     tb0 = table(deseq_data_v3[[paste0(species, "_", tissue)]]$bias)
+    cat(species, " ", tissue," ", tb0,"\n")
     df0 = as.data.frame(tb0)
-    colnames(df0) = c("sex-bias", "num")
+    colnames(df0) = c("sexbias", "num")
     df0$species = species
     df0$tissue = get_tissueFull(tissue)
     df = rbind(df, df0)
   }
 }
 
+
 write.table(df, "/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/sb/sb.summary.txt", sep="\t", quote = FALSE)
+
+
+df = df[,c("species", "tissue", "sexbias", "num")]
+#dff = reshape(df,idvar = c("species", "tissue"), timevar = "sexbias", direction = "wide")
+
+df$speciestissue = as.character(interaction(df$species, df$tissue))
+df$speciestissue = factor(df$speciestissue, levels = unique(df$speciestissue))
+
+pdf("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/sb/sb.bar.summary.nonDmel.pdf",width=10,height=10,useDingbats=FALSE)
+ggplot(df[49:219,], aes(x = speciestissue, fill= sexbias, group= sexbias, y= num)) + geom_bar(stat = "identity") + scale_fill_manual(values = c("blue", "grey", "red")) + theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylab("number of genes")
+dev.off()
 
 ```
 
 
-```{r expression of orthologs shared by species}
+
+```{r context female vs male each tissue}
+
+ct = list()
+for (species in c("w1118", "oreR", species_in_final_order[2:9])){
+  if (species %in% c("dmel", "dgri", "w1118", "oreR")){
+    tissues = tissues_in_final_order
+  }
+  if (species %in% species_in_final_order[2:8]){s
+    tissues = tissues_in_final_order_no_ge
+  }
+  ct0 = data.frame(row.names = row.names(deseq_data_v3[[paste0(species, "_wb")]]))
+  for (tissue in tissues){
+    x = deseq_data_v3[[paste0(species, "_", tissue)]]
+    df0 = data.frame(row.names = row.names(x), bias = sapply(x$bias, firstLetter))
+    colnames(df0) = tissue
+    ct0 = cbind(ct0, df0)
+  }
+  ct[[species]] = ct0
+}
+
+
+
+
+all_context = data.frame(row.names = c("c", "f", "m", "u"))
+for (species in c("w1118", species_in_final_order[2:9])){
+   dxxx = species
+    if (species == "w1118"){
+      dxxx = "dmel"
+    }
+  c0 = data.frame(row.names = row.names(ct[[species]]), context = apply(ct[[species]], 1, if_ct))
+  c1 = as.data.frame(table(c0$context))
+  colnames(c1) = c("context", "num")
+  row.names(c1) = c1$context
+  c2 = data.frame(row.names = c1$context, num = c1$num)
+  names(c2) = species
+  all_context = cbind(all_context, c2)
+}
+
+# ratio of context genes
+all_context[1,]/apply(all_context,2,sum)
+
+all_context_long = melt(all_context)
+colnames(all_context_long) = c("species", "num")
+all_context_long$context = c("c", "f", "m", "u")
+all_context_long$speciescontext = interaction(all_context_long$species, all_context_long$context)
+all_context_long$context = factor(all_context_long$context, levels=c("u", "f", "m", "c"))
+
+pdf("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/ct/all.gene.species.pdf",width=10,height=10,useDingbats=FALSE)
+ggplot(all_context_long, aes(x = species, fill= context, group= context, y= num)) + geom_bar(stat = "identity") + scale_fill_manual(values = c("grey", "red", "blue", "purple")) + theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylab("number of genes")
+dev.off()
+
+```
+
+
+
+```{r dsx-target of context}
+species = "w1118"
+ct0 = data.frame(row.names = row.names(deseq_data_FB[[paste0(species, "_wb")]]))
+for (tissue in tissues){
+    x = deseq_data_FB[[paste0(species, "_", tissue)]]
+    df0 = data.frame(row.names = row.names(x), bias = sapply(x$bias, firstLetter))
+    colnames(df0) = tissue
+    ct0 = cbind(ct0, df0)
+}
+
+c0 = data.frame(row.names = row.names(ct0), context = apply(ct0, 1, if_ct))
+row.names(dsx_table) = dsx_table$FBgn
+
+dsx_table = read.table("/Users/yangh13/python/packages/CRoS/CRoS/dsxtarget/bigtable.dsxtarget.txt", sep="\t", header=1, quote="")
+c00 = merge(c0, dsx_table, by="row.names")
+
+tab = table(c00$context, c00$Peaksum_Occupancy_kmeans_Cluster_Number)
+tab_long = melt(tab)
+colnames(tab_long) = c("context", "cluster", "num")
+tab_long$context = factor(tab_long$context, levels=c("u", "f", "m", "c"))
+
+pdf("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/ct/dsx_target.w1118.pdf",width=10,height=10,useDingbats=FALSE)
+ggplot(tab_long, aes(x = cluster, fill= context, group= context, y= num)) + geom_bar(stat = "identity") + scale_fill_manual(values = c("grey", "red", "blue", "purple")) + theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylab("number of genes")
+dev.off()
+
+```
+
+
+```{r DESeq2 sex-biased expression of orthologs}
+compare_tissue_wb_of_the_same_sex = function(countData_this, colData_this, species, tissue, sex, alpha=0.05) {
+  # obtain part data just about this tissue in dgriG1 
+  # part_countData = countData_this[,names(countData_this)[grepl(paste0("_",tissue,"_"),names(countData_this)) & !grepl("dgriG1_m_re_R2a", names(countData_this)) ]]
+  
+  part_countData1 = countData_this[,names(countData_this)[grepl(paste0(sex, "_",tissue,"_"),names(countData_this)) & !grepl("dyak_m_wb_R4",names(countData_this))]]
+  part_countData2 = countData_this[,names(countData_this)[grepl(paste0(sex, "_","wb","_"),names(countData_this)) & !grepl("dyak_m_wb_R4",names(countData_this))]]
+  part_countData = cbind(part_countData1, part_countData2)
+  
+  part_colData = colData_this[colnames(part_countData),]
+  part_colData[['tissue']] = factor(part_colData[['tissue']], levels = c('wb', tissue)) 
+  
+  # do deseq2
+  part_dds = DESeqDataSetFromMatrix(part_countData, part_colData, design=~tissue)
+  part_dds = estimateSizeFactors(part_dds)
+  part_dds = DESeq(part_dds)
+  resultsNames(part_dds)
+  part_res = results(part_dds)
+  summary(part_res,alpha=alpha)
+  
+  part_dds = estimateSizeFactors(part_dds)
+  part_normCounts = counts(part_dds, normalized=TRUE)
+  
+  part_res_sig = part_res[part_res$padj<alpha & !is.na(part_res$padj),]
+  part_res_sig_tissue = part_res_sig[part_res_sig$log2FoldChange>0,]
+  part_res_sig_wb = part_res_sig[part_res_sig$log2FoldChange<0,]
+  FBgns_res_sig_tissue = rownames(part_res_sig_tissue)
+  FBgns_res_sig_wb = rownames(part_res_sig_wb)
+  
+  FBgns_all = rownames(part_res)
+  FBgns_all_minus_t = FBgns_all[! FBgns_all %in% FBgns_res_sig_tissue]
+  FBgns_unbiased = FBgns_all_minus_t[! FBgns_all_minus_t %in% FBgns_res_sig_wb]
+  df_bias_t = data.frame("FBgn_ID"=as.character(unlist(FBgns_res_sig_tissue)),"bias"="tissue")
+  df_bias_unbias = data.frame("FBgn_ID"=FBgns_unbiased,"bias"="unbiased")
+  df_bias_wb = data.frame("FBgn_ID"=as.character(unlist(FBgns_res_sig_wb)),"bias"="wb")
+  df_bias_total = rbind(df_bias_t,df_bias_unbias,df_bias_wb)
+  df_bias_total$FBgn_ID = as.character(df_bias_total$FBgn_ID)
+  df_bias_total = df_bias_total[order(df_bias_total$FBgn_ID),]
+  
+  
+  x = log2(part_normCounts+1)
+  x = merge(x, part_res, by="row.names")
+  row.names(x) = x$Row.names 
+  x = x[,-1]
+  #colnames(x) = gsub(paste0("dgriWm1041_f_", tissue, "_"), "", colnames(x))
+  #colnames(x) = gsub("a$", "_mix", colnames(x))
+  #colnames(x) = gsub("b$", "_single", colnames(x))
+  x$bias = df_bias_total$bias
+  
+  
+  x$col = rgb(0,0,0,0.3)
+  x$col[x$bias == "tissue"] = rgb(0,1,0,0.6)
+  x$col[x$bias == "wb"] = rgb(1,0,1,0.6)
+  x$MAplot_mean_R1 = (x[,1] + x[,2])/2
+  x$MAplot_log2FoldChange = x$log2FoldChange
+  
+  y = x
+  
+  return(y)
+}
+
+# FlyBase-annotation DESeq2 sex-biased plot manual MAplot and save the data
+tissue_data_fb = list()
+for (species in c("w1118", "oreR", species_in_final_order)){
+  if (species %in% c("dmel", "dgri", "w1118", "oreR")){
+    tissues = tissues_in_final_order
+  }
+  if (species %in% species_in_final_order[2:8]){s
+    tissues = tissues_in_final_order_no_ge
+  }
+  for (tissue in tissues[!grepl("wb", tissues)]){
+    for (sex in c('f', 'm')){
+      print(paste0(species, " ", sex, " ", tissue))
+      colData_species = read.table(paste0(base_path, "data/htseq/FB2017_03/", species, ".design"), header=TRUE, sep='',row.names='sample_id')
+      countData_species = read.table(paste0(base_path, "data/htseq/FB2017_03/", species,".genic.htseq.mat"), header=TRUE, sep='\t',row.names="FBgn")
+      countData_species = countData_species[!grepl("^ERCC",row.names(countData_species)),]
+      countData_species = countData_species[!grepl("^__",row.names(countData_species)),]
+      countData_this = countData_species
+      colData_this = colData_species
+      
+      tissue_data_fb[[paste0(species, "_", sex, "_", tissue)]] = compare_tissue_wb_of_the_same_sex(countData_this, colData_this, species,  tissue, sex, alpha=0.05)
+    }
+  }
+}
+
+#save(tissue_data_fb,file=paste0(base_path, "data/deseq/tissue_data_fb.RData"))
+#load(paste0(base_path, "data/deseq/tissue_data_fb.RData"))
+
+# This-study-annotation DESeq2 sex-biased plot manual MAplot and save the data
+tissue_data_v3 = list()
+for (species in c("w1118", "oreR", species_in_final_order)){
+  if (species %in% c("dmel", "dgri", "w1118", "oreR")){
+    tissues = tissues_in_final_order
+  }
+  if (species %in% species_in_final_order[2:8]){s
+    tissues = tissues_in_final_order_no_ge
+  }
+  for (tissue in tissues[!grepl("wb", tissues)]){
+    for (sex in c('f', 'm')){
+      print(paste0(species, " ", sex, " ", tissue))
+      colData_species = read.table(paste0(base_path, "data/htseq/FB2017_03_v3/", species, ".design"), header=TRUE, sep='',row.names='sample_id')
+      countData_species = read.table(paste0(base_path, "data/htseq/FB2017_03_v3/", species,".genic.htseq.mat"), header=TRUE, sep='\t',row.names="FBgn")
+      countData_species = countData_species[!grepl("^ERCC",row.names(countData_species)),]
+      countData_species = countData_species[!grepl("^__",row.names(countData_species)),]
+      countData_this = countData_species
+      colData_this = colData_species
+      
+      tissue_data_v3[[paste0(species, "_", sex, "_", tissue)]] = compare_tissue_wb_of_the_same_sex(countData_this, colData_this, species,  tissue, sex, alpha=0.05)
+    }
+  }
+}
+
+# save(tissue_data_v3,file=paste0(base_path, "data/deseq/tissue_data_v3.RData"))
+load(paste0(base_path, "data/deseq/tissue_data_v3.RData"))
+```
+
+
+
+```{r MAplot tissue vs wb of the same sex}
+
+
+species = "w1118"
+for (tissue in tissues_in_final_order[2:8]){
+  for (sex in c("f", "m")){
+    tb0 = table(tissue_data_v3[[paste0(species, "_", sex, "_", tissue)]]$bias)
+    df0 = as.data.frame(tb0)
+    colnames(df0) = c("tissuebias", "num")
+    df0$species = species
+    df0$tissue = get_tissueFull(tissue)
+    x = tissue_data_v3[[paste0(species, "_", sex, "_", tissue)]]
+    
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange > 2] = 2
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange < -2] = -2
+    png(paste0("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/tb/w1118.", sex, ".", tissue,".png"),width=2000,height=2000,res=600)
+    par(mar=c(1,1,1,1))
+    plot(x$MAplot_mean_R1, x$MAplot_log2FoldChange, col=x$col, pch = 19, xlim=c(0,18), cex.axis = 0.01, xlab="", ylab="")
+    dev.off()
+    cat(sex, " ", get_tissueFull(tissue),"\t", table(x$bias),"\n")
+  }
+}
+
+
+
+png(paste0("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/tb/w1118.png"),width=12000,height=3000)
+par(mfcol=c(2,7))
+species = "w1118"
+for (tissue in tissues_in_final_order[2:8]){
+  for (sex in c("f", "m")){
+    tb0 = table(tissue_data_v3[[paste0(species, "_", sex, "_", tissue)]]$bias)
+    df0 = as.data.frame(tb0)
+    colnames(df0) = c("tissuebias", "num")
+    df0$species = species
+    df0$tissue = get_tissueFull(tissue)
+    x = tissue_data_v3[[paste0(species, "_", sex, "_", tissue)]]
+    
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange > 2] = 2
+    x$MAplot_log2FoldChange[x$MAplot_log2FoldChange < -2] = -2
+    
+    plot(x$MAplot_mean_R1, x$MAplot_log2FoldChange, col=x$col, pch = 19, cex = 10, xlim=c(0,18), cex.axis=10, cex.lab=10, cex.main=5, main = paste0(sex, " ", get_tissueFull(tissue)), xlab="", ylab="", cex.main = 10)
+    text(16, 1.5, labels = as.numeric(table(x$bias)["tissue"]), col = rgb(0,1,0), cex = 20)
+    text(16, -1.5, labels = as.numeric(table(x$bias)["wb"]), col = rgb(1,0,1), cex = 20)
+  }
+}
+dev.off()
+```
+
+
+
+```{r barplot tissue vs wb of the same sex}
+
+dft = data.frame()
+for (species in c("w1118", "oreR", species_in_final_order[2:9])){
+  if (species %in% c("dmel", "dgri", "w1118", "oreR")){
+    tissues = tissues_in_final_order
+  }
+  if (species %in% species_in_final_order[2:8]){s
+    tissues = tissues_in_final_order_no_ge
+  }
+  for (tissue in tissues[!grepl("wb", tissues)]){
+    for (sex in c("f", "m")){
+      tb0 = table(tissue_data_v3[[paste0(species, "_", sex, "_", tissue)]]$bias)
+      cat(species, " ", sex, " ", tissue," ", tb0,"\n")
+      df0 = as.data.frame(tb0)
+      colnames(df0) = c("tissuebias", "num")
+      df0$species = species
+      df0$sex = sex
+      df0$tissue = get_tissueFull(tissue)
+      dft = rbind(dft, df0)
+    }
+  }
+}
+
+
+write.table(dft, "/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/tb/tb.summary.txt", sep="\t", quote = FALSE)
+
+
+dft = dft[,c("species", "sex", "tissue", "tissuebias", "num")]
+#dff = reshape(df,idvar = c("species", "tissue"), timevar = "sexbias", direction = "wide")
+
+dft$speciestissuesex = as.character(interaction(dft$species, dft$tissue, dft$sex))
+dft$speciestissuesex = factor(dft$speciestissuesex, levels = unique(dft$speciestissuesex))
+
+pdf("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/tb/tb.bar.summary.nonDmel.pdf",width=10,height=10,useDingbats=FALSE)
+ggplot(dft[85:378,], aes(x = speciestissuesex, fill= tissuebias, group= tissuebias, y= num)) + geom_bar(stat = "identity") + scale_fill_manual(values = c("green", "grey", "purple")) + theme_bw() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ylab("number of genes")
+dev.off()
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r sex-bias of orthologs shared by species}
 # get 1:1 ortholog table
 orthTab = NULL
 
@@ -274,37 +714,45 @@ for (species in species_in_final_order[2:9]){
   orthTab = orthTab[,-1]
 }
 
-write.table(orthTab, "/Users/yangh13/PGMF/PGMF/data/ortholog/orth_8490.txt", quote=FALSE, sep="\t")
+write.table(orthTab, "/Users/yangh13/PGMF/PGMF/data/ortholog/orth_8590.txt", quote=FALSE, sep="\t")
 
 
 # for each tissue, get sigSexBiased each species
+nrcmatrix = data.frame(row.names = row.names(orthTab), symbol = orthTab$symbol)
 sbmatrix = data.frame(row.names = row.names(orthTab), symbol = orthTab$symbol)
+bsmatrix = data.frame(row.names = row.names(orthTab), symbol = orthTab$symbol)
 for (tissue in tissues_in_final_order){
   print(tissue)
-  
-  manyspecies = species_in_final_order
+  manyspecies = c("w1118", species_in_final_order[2:9])
   if (tissue == "ge"){
-    manyspecies = c("dmel", "dgri")
+    manyspecies = c("w1118", "dgri")
   }
 
   for (species in manyspecies){
+    dxxx = species
+    if (species == "w1118"){
+      dxxx = "dmel"
+    }
     v3 = deseq_data_v3[[paste0(species, "_", tissue)]]
     FB = deseq_data_FB[[paste0(species, "_", tissue)]]
     BO = rbind(v3, FB)
     
-    orthTab2 = data.frame(row.names = orthTab[,species], dmelFBgn = row.names(orthTab), dmelSymbol = orthTab[,'symbol'])
+    orthTab2 = data.frame(row.names = orthTab[,dxxx], dmelFBgn = row.names(orthTab), dmelSymbol = orthTab[,'symbol'])
 
     BO8 = merge(orthTab2, BO, by="row.names")
     
     BO8 = BO8[order(BO8$dmelFBgn),]
-    
+  
+    nrcmatrix = cbind(nrcmatrix, BO8[,grepl(tissue, colnames(BO8))])
     sbmatrix[,paste0(tissue, "_", species)] = BO8[,"log2FoldChange"]
+    bsmatrix[,paste0(tissue, "_", species)] = sapply(BO8[,"bias"], firstLetter)
   }
 }
 
+
 # modified version (if NA logFC == 0, logFC max +-4)
 sbmatrix2 = sbmatrix
-row.names(sbmatrix2) = sbmatrix2$symbol
+#row.names(sbmatrix2) = sbmatrix2$symbol
 sbmatrix2 = sbmatrix2[,-1]
 sbmatrix2[is.na(sbmatrix2)] = 0
 # flip female and male
@@ -313,22 +761,51 @@ sbmatrix2 = -sbmatrix2
 ```
 
 
-
-```{r }
-plotWSS = function(mydata){
-  wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
-  for (i in 2:50) {
-    wss[i] <- sum(kmeans(mydata,centers=i)$withinss)
-  }   
-  plot(1:50, wss, type="b", xlab="Number of Clusters",ylab="Within groups sum of squares")
+```{r orth context summary}
+orth_context = data.frame(row.names = row.names(bsmatrix))
+for (species in c("w1118", species_in_final_order[2:9])){
+   dxxx = species
+    if (species == "w1118"){
+      dxxx = "dmel"
+    }
+  m = bsmatrix[,grepl(species, colnames(bsmatrix))]
+  c0 = data.frame(row.names = row.names(bsmatrix), context = apply(m, 1, if_ct_num))
+  colnames(c0) = dxxx
+  orth_context = cbind(orth_context, c0)
 }
+
+
+  pdf("/Users/yangh13/Projects/python/packages/CRoS/CRoS/manuscript/geo/local_manySpecies/ct/orth_context.pdf", width=10, height=10)
+  pheatmap(orth_context, cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=10, legend = TRUE, col = colorRampPalette(c("red", "grey", "blue", "purple"))(4))
+  dev.off()
+  
+```
+
+```{r tissue compared to wb}
+  median_wb = rowMedians(as.matrix(nrcmatrix[,grepl("_wb_", colnames(nrcmatrix))]))
+  nrcmatrix_div = log2(nrcmatrix[,2:618]/median_wb)
+  nrcmatrix_div[is.na(nrcmatrix_div)] = 1
+  
+  n = 5
+  nrcmatrix_div[nrcmatrix_div > n] = n
+  nrcmatrix_div[nrcmatrix_div < -n] = -n
+  
+  
+  nrcmatrix_div = cbind(data.frame(row.names = row.names(nrcmatrix), symbol = nrcmatrix[,1]), nrcmatrix_div)
+  
+  plotWSS(nrcmatrix_div[,-1])
+
+
+```
+
+```{r kmean}
 
 plotWSS(sbmatrix2)
 
-calKmeans = function(x, k){
+
   set.seed(1)
   x = sbmatrix2
-  k = 15
+  k = 10
   kmeansout<-kmeans(x, k)
   kmeanscl<-as.data.frame(kmeansout$cl)
   colnames(kmeanscl)<-c("cluster")
@@ -364,8 +841,15 @@ pheatmap(mm, color=pal(100), cluster_rows=FALSE, show_rownames=FALSE, cluster_co
 
 ```{r heatmap plot all samples}
   png(paste0(base_path, "data/output/expression.heatmap.of.orthologs.png"),width=5000,height=5000, res = 300, bg = NA)
-  pheatmap(log2(bigmatrix+1), cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=1, legend = FALSE)
-  # pheatmap(log2(bigmatrix+1), color=pal(100), cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = TRUE, fontsize=0.1, legend = FALSE, breaks=seq(-b,b,length.out=100))
+  pheatmap(log2(bigmatrix+1), cluster_rows=TRUE, show_rownames=FALSE, cluster_cols=FALSE, show_colnames = FALSE, fontsize=1, legend = FALSE)
+  dev.off()
+  
+  # lbigmatrix = log2(bigmatrix+1)
+  # hclust(t(lbigmatrix))
+  
+  png(paste0(base_path, "data/output/expression.heatmap.of.orthologs.clusterSamples.png"),width=10000,height=10000, res = 600, bg = NA)
+  pheatmap(log2(bigmatrix+1), cluster_rows=FALSE, show_rownames=FALSE, cluster_cols=TRUE, show_colnames = TRUE, fontsize=1, legend = FALSE)
+
   dev.off()
   
 ```
